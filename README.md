@@ -27,7 +27,7 @@ Python · Tkinter with ttkbootstrap · MySQL (mysql-connector-python) · matplot
 
 ## Run it
 
-Requirements: Python 3.10+ and MySQL 8 (or MariaDB).
+Requirements: Python 3.10+ and MySQL 8 or MariaDB (tested with MariaDB 11.4).
 
 ```
 mysql -u root -p < db/schema.sql
@@ -35,7 +35,7 @@ mysql -u root -p < db/seed.sql
 pip install -r requirements.txt
 ```
 
-Set the database login (or copy `.env.example` and export its values), then start either app from the repository root:
+Set the database login (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`; see `.env.example`), then start either app from the repository root:
 
 ```
 set DB_PASSWORD=your-mysql-password      # macOS/Linux: export DB_PASSWORD=...
@@ -45,4 +45,12 @@ python -m staff_app.main
 
 ## Note
 
-The original GitLab repository is no longer accessible, so this code was recovered from my last saved versions (October 2024). The only changes are that the database login now comes from environment variables and the library versions are pinned to those of 2024. All people and orders in the example data are made up.
+The original GitLab repository is no longer accessible, so this code was recovered from my last saved versions (October 2024). Running it end to end afterwards turned up bugs in that last version, which are fixed here:
+
+- Placing an order crashed on a half-finished loyalty change, and order items were all stored as pizzas
+- The basket and the order used two different price formulas, both adding VAT and margin on top of menu prices that already include them; a discount code applied in the basket never reached the order, and the birthday discount was subtracted after the total was saved
+- The free 10th pizza was never added (it looked for a menu item that did not exist)
+- Staff could not add menu items (the save step had lost its button), and new pizzas were never marked vegetarian or vegan
+- The earnings report showed no ages unless an age filter was set
+
+The database login now comes from environment variables and the library versions are pinned to those of 2024. All people and orders in the example data are made up.

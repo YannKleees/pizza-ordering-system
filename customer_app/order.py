@@ -12,28 +12,25 @@ class OrderManager:
     def place_order(self, customer_id, basket, delivery_method, discount_code=None, is_birthday=False):
         """Place an order and apply discounts or free items if applicable."""
         try:
-            # Calculate subtotal using 'calculate_total_price' without passing self.db
-            subtotal_result = basket.calculate_total_price()
-            subtotal = Decimal(str(subtotal_result['subtotal']))
-            
-            # Apply discount if any
-            discount_amount = Decimal('0.00')
-            if discount_code:
+            # Menu prices are final; the basket subtracts the discounts (see Basket.calculate_total_price)
+            subtotal = Decimal(str(basket.calculate_total_price()['subtotal']))
+
+            # Birthday: 10% off, once per basket
+            if is_birthday and not basket.birthday_discount_applied:
+                basket.apply_discount(subtotal * Decimal('0.10'), "birthday")
+
+            # A code typed at checkout that was not already applied in the basket
+            if discount_code and basket.discount_code != discount_code:
                 discount_result = self.validate_and_apply_discount_code(discount_code, subtotal)
-                if discount_result["success"]:
-                    discount_amount = Decimal(str(discount_result["discount_amount"]))
-                    subtotal -= discount_amount
-                else:
+                if not discount_result["success"]:
                     self.db.connection.rollback()
                     return {"success": False, "message": discount_result.get("message", "Discount application failed.")}
+                basket.apply_discount(discount_result["discount_amount"])
+                basket.discount_code = discount_code
 
-            # Calculate taxes (assuming VAT and VTA)
-            TVA_RATE = Decimal('0.09')  # 9%
-            VTA_RATE = Decimal('0.05')  # 5%
-            tva = (subtotal * TVA_RATE).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            vta = (subtotal * VTA_RATE).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            grand_total = (subtotal + tva + vta).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            
+            discount_amount = basket.discount_amount
+            grand_total = Decimal(str(basket.calculate_total_price()['grand_total']))
+
             # Insert order into customerorder table
             insert_order_query = """
                 INSERT INTO customerorder (customer_id, order_date, confirmation_number, status, total_price, delivery_method)
@@ -56,31 +53,22 @@ class OrderManager:
 
             # Insert order items
             insert_order_item_query = """
-                INSERT INTO order_item (order_id, menu_item_id, quantity)
-                VALUES (%s, %s, %s)
+                INSERT INTO order_item (order_id, menu_item_id, quantity, item_type)
+                VALUES (%s, %s, %s, %s)
             """
             for item in basket.items:
                 self.db.execute_query(insert_order_item_query, (
                     order_id,
                     item['id'],
-                    item['quantity']
+                    item['quantity'],
+                    item['type'].capitalize()   # without it every item was stored as 'Pizza' (enum default)
                 ))
             
-            # Apply birthday offer if applicable
-            free_pizza_added = False
-            free_drink_added = False
-            # Apply birthday discount if applicable
-            if is_birthday:
-                birthday_discount = (subtotal * Decimal('0.10')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                discount_amount += birthday_discount
-                subtotal -= birthday_discount
-                logger.info(f"Birthday discount applied: €{birthday_discount:.2f}")
-
             # Commit the transaction
             self.db.connection.commit()
 
-            # Update customer's loyalty points if needed
-            self.update_loyalty_points(customer_id, basket.items)
+            # Update customer's loyalty points; every 10th pizza adds a free one to this order
+            free_pizza_added = self.update_loyalty_points(customer_id, order_id, basket.items)
 
             # Prepare confirmation details
             details = {
@@ -90,7 +78,7 @@ class OrderManager:
                 "delivery_time_estimation": self.estimate_delivery_time(delivery_method),
                 "discount_applied": discount_amount > 0,
                 "discount_amount": discount_amount,
-                "free_pizza": free_pizza_added and free_drink_added
+                "free_pizza": bool(free_pizza_added)
             }
 
 
@@ -103,8 +91,13 @@ class OrderManager:
 
     def get_free_pizza_id(self):
         """Retrieve the menu_item_id for the free pizza offer."""
-        # Assuming you have a special menu item for the free pizza
-        query = "SELECT menu_item_id FROM menu_item WHERE name = 'Free Pizza' LIMIT 1"
+        # A dedicated 'Free Pizza' item if the shop has one, otherwise the cheapest pizza on the menu
+        query = """
+            SELECT menu_item_id FROM menu_item
+            WHERE type = 'Pizza'
+            ORDER BY (name = 'Free Pizza') DESC, price ASC
+            LIMIT 1
+        """
         cursor = self.db.execute_query(query)
         result = cursor.fetchone()
         return result['menu_item_id'] if result else None
@@ -200,8 +193,8 @@ class OrderManager:
                 free_pizza_id = self.get_free_pizza_id()
                 if free_pizza_id:
                     insert_order_item_query = """
-                        INSERT INTO order_item (order_id, menu_item_id, quantity)
-                        VALUES (%s, %s, %s)
+                        INSERT INTO order_item (order_id, menu_item_id, quantity, item_type)
+                        VALUES (%s, %s, %s, 'Pizza')
                     """
                     self.db.execute_query(insert_order_item_query, (
                         order_id,

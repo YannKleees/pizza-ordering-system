@@ -436,9 +436,8 @@ class CustomerApp:
         profit = Decimal(total_details['profit'])
         grand_total = Decimal(total_details['grand_total'])
 
+        # Menu prices already include the 40% margin and 9% VAT, so they are not added again
         ttk.Label(calculations_frame, text=f"Subtotal: €{subtotal:.2f}", font=("Helvetica", 14)).pack(anchor='e')
-        ttk.Label(calculations_frame, text=f"VAT (9%): €{vat_amount:.2f}", font=("Helvetica", 14)).pack(anchor='e')
-        ttk.Label(calculations_frame, text=f"Profit Margin (40%): €{profit:.2f}", font=("Helvetica", 14)).pack(anchor='e')
 
         # If birthday discount was applied, display it
         if getattr(self, 'is_birthday', False) and self.basket.birthday_discount_applied:
@@ -449,6 +448,7 @@ class CustomerApp:
             ttk.Label(calculations_frame, text=f"Discount Applied: -€{self.basket.discount_amount:.2f}", font=("Helvetica", 14), foreground="green").pack(anchor='e')
 
         ttk.Label(calculations_frame, text=f"Grand Total: €{grand_total:.2f}", font=("Helvetica", 16, "bold")).pack(anchor='e', pady=5)
+        ttk.Label(calculations_frame, text=f"incl. VAT (9%): €{vat_amount:.2f}", font=("Helvetica", 11)).pack(anchor='e')
 
         # Discount Code Entry
         discount_frame = ttk.Frame(content_frame)
@@ -480,7 +480,8 @@ class CustomerApp:
         if discount_result["success"]:
             discount_amount = Decimal(str(discount_result["discount_amount"])).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             self.basket.apply_discount(discount_amount)
-            new_total = total_details['grand_total']
+            self.basket.discount_code = discount_code      # the order step must not validate it a second time
+            new_total = self.basket.calculate_total_price()['grand_total']
             message = f"{discount_result['message']} Discount Applied: -€{discount_amount:.2f} \nNew Total: €{new_total:.2f}"
             self.main_notification.config(text=message, foreground="green")
             
@@ -564,7 +565,7 @@ class CustomerApp:
                 confirmation_info += f"Discount Applied: -€{details['discount_amount']:.2f}\n"
 
             if details["free_pizza"]:
-                confirmation_info += "Congratulations! You've earned a free pizza and drink for your next order.\n"
+                confirmation_info += "Your 10th pizza: a free pizza was added to this order!\n"
 
             ttk.Label(content, text=confirmation_info, font=("Helvetica", 14), justify="left").pack(pady=10)
 

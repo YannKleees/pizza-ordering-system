@@ -17,9 +17,12 @@ class DatabaseConnection:
         try:
             self.connection = mysql.connector.connect(
                 host=os.getenv("DB_HOST", "localhost"),
+                port=int(os.getenv("DB_PORT", "3306")),
                 user=os.getenv("DB_USER", "root"),
                 password=os.getenv("DB_PASSWORD", ""),
-                database=os.getenv("DB_NAME", "pizza_ordering_system")
+                database=os.getenv("DB_NAME", "pizza_ordering_system"),
+                charset="utf8mb4",
+                collation="utf8mb4_unicode_ci",  # works on MySQL 8 and MariaDB
             )
             self.cursor = self.connection.cursor(dictionary=True, buffered=True)
             logger.info("Database connection established.")

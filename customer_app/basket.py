@@ -10,6 +10,7 @@ class Basket:
         self.items = []  # List of items: [{'id': ..., 'name': ..., 'quantity': ..., 'type': ..., 'price': ...}, ...]
         self.discount_amount = Decimal('0.00')  # Initialize total discount to zero
         self.birthday_discount_applied = False  # Flag to track if birthday discount has been applied
+        self.discount_code = None  # Code already validated in the basket, so the order does not re-check it
 
     def add_item(self, item_id, name, quantity, item_type, price):
         """Add an item to the basket."""
@@ -44,6 +45,7 @@ class Basket:
         self.items = []
         self.discount_amount = Decimal('0.00')
         self.birthday_discount_applied = False
+        self.discount_code = None
         logger.info("Basket cleared.")
 
     def apply_discount(self, discount_amount, discount_type="general"):
@@ -74,41 +76,18 @@ class Basket:
 
     def calculate_total_price(self):
         """
-        Calculate the total price of items in the basket, apply VAT and profit margin,
-        and subtract any discounts.
-        Returns a dictionary with detailed cost breakdown.
+        Total of the basket. Menu prices are final: the staff app already includes the 40%
+        margin and 9% VAT, so only discounts are subtracted here. The VAT contained in the
+        total is reported for the receipt.
         """
-        subtotal = Decimal('0.00')
-        
-        for item in self.items:
-            item_total = item['price'] * item['quantity']
-            subtotal += item_total
+        subtotal = sum((item['price'] * item['quantity'] for item in self.items), Decimal('0.00'))
+        grand_total = max(Decimal('0.00'), subtotal - self.discount_amount).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        vat_included = (grand_total * Decimal('9') / Decimal('109')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-        # Apply VAT (assuming 9%)
-        VAT_RATE = Decimal('0.09')
-        vat_amount = (subtotal * VAT_RATE).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-
-        # Apply 40% profit margin
-        PROFIT_MARGIN = Decimal('0.40')
-        profit = (subtotal * PROFIT_MARGIN).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-
-        # Calculate grand total: subtotal + VAT + profit
-        grand_total = (subtotal + vat_amount + profit).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-
-        # Apply discount if any
-        grand_total_after_discount = (grand_total - self.discount_amount).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        grand_total_after_discount = max(Decimal('0.00'), grand_total_after_discount)
-
-        logger.info(f"Subtotal: €{subtotal:.2f}")
-        logger.info(f"VAT (9%): €{vat_amount:.2f}")
-        logger.info(f"Profit Margin (40%): €{profit:.2f}")
-        logger.info(f"Grand Total before discount: €{grand_total:.2f}")
-        logger.info(f"Discount Applied: €{self.discount_amount:.2f}")
-        logger.info(f"Grand Total after discount: €{grand_total_after_discount:.2f}")
-
+        logger.info(f"Subtotal: €{subtotal:.2f}, discounts: €{self.discount_amount:.2f}, total: €{grand_total:.2f}")
         return {
             'subtotal': subtotal,
-            'vat_amount': vat_amount,
-            'profit': profit,
-            'grand_total': grand_total_after_discount
+            'vat_amount': vat_included,
+            'profit': Decimal('0.00'),
+            'grand_total': grand_total
         }

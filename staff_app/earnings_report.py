@@ -202,24 +202,24 @@ class EarningsReport:
             messagebox.showerror("Database Error", f"Failed to generate report: {e}")
             return
 
-        # Filter by age
-        if min_age is not None or max_age is not None:
-            today = datetime.today()
-            filtered_records = []
-            for record in records:
-                birthdate = record['birthdate']
-                if birthdate:
-                    age = today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
-                    if min_age is not None and age < min_age:
-                        continue
-                    if max_age is not None and age > max_age:
-                        continue
-                    record['age'] = age
-                    filtered_records.append(record)
-                else:
-                    # Exclude records without birthdate when age filtering is applied
+        # Age for every customer with a birthdate (it used to be filled only when an age filter was set)
+        today = datetime.today()
+        filtering = min_age is not None or max_age is not None
+        filtered_records = []
+        for record in records:
+            birthdate = record['birthdate']
+            if birthdate:
+                age = today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
+                if min_age is not None and age < min_age:
                     continue
-            records = filtered_records
+                if max_age is not None and age > max_age:
+                    continue
+                record['age'] = age
+            elif filtering:
+                # Exclude records without birthdate when age filtering is applied
+                continue
+            filtered_records.append(record)
+        records = filtered_records
 
         logger.info(f"Generated earnings report with {len(records)} records.")
         self.display_report(records)

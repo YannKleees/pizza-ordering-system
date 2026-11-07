@@ -16,7 +16,7 @@ CREATE TABLE `customer` (
   `address` varchar(255) DEFAULT NULL,
   `pizzas_ordered` int DEFAULT '0',
   PRIMARY KEY (`customer_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `customerorder`;
 CREATE TABLE `customerorder` (
@@ -31,7 +31,7 @@ CREATE TABLE `customerorder` (
   PRIMARY KEY (`order_id`),
   KEY `customer_id` (`customer_id`),
   CONSTRAINT `customer_order_fk_customer` FOREIGN KEY (`customer_id`) REFERENCES `customer` (`customer_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `deliveryassignment`;
 CREATE TABLE `deliveryassignment` (
@@ -44,7 +44,7 @@ CREATE TABLE `deliveryassignment` (
   KEY `delivery_person_id` (`delivery_person_id`),
   CONSTRAINT `deliveryassignment_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `customerorder` (`order_id`),
   CONSTRAINT `deliveryassignment_ibfk_2` FOREIGN KEY (`delivery_person_id`) REFERENCES `deliverypersonnel` (`delivery_person_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `deliverypersonnel`;
 CREATE TABLE `deliverypersonnel` (
@@ -53,7 +53,7 @@ CREATE TABLE `deliverypersonnel` (
   `assigned_postal_code` varchar(10) DEFAULT NULL,
   `availability` tinyint(1) DEFAULT '1',
   PRIMARY KEY (`delivery_person_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `dessert`;
 CREATE TABLE `dessert` (
@@ -61,7 +61,7 @@ CREATE TABLE `dessert` (
   `name` varchar(100) NOT NULL,
   `price` decimal(10,2) NOT NULL,
   PRIMARY KEY (`dessert_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `discountcode`;
 CREATE TABLE `discountcode` (
@@ -70,7 +70,7 @@ CREATE TABLE `discountcode` (
   `is_used` tinyint(1) DEFAULT '0',
   `discount_percentage` decimal(5,2) DEFAULT NULL,
   PRIMARY KEY (`code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `drink`;
 CREATE TABLE `drink` (
@@ -78,7 +78,7 @@ CREATE TABLE `drink` (
   `name` varchar(100) NOT NULL,
   `price` decimal(10,2) NOT NULL,
   PRIMARY KEY (`drink_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `earningreport`;
 CREATE TABLE `earningreport` (
@@ -86,7 +86,7 @@ CREATE TABLE `earningreport` (
   `month` date NOT NULL,
   `total_earnings` decimal(10,2) NOT NULL,
   PRIMARY KEY (`report_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `ingredient`;
 CREATE TABLE `ingredient` (
@@ -96,7 +96,7 @@ CREATE TABLE `ingredient` (
   `is_vegan` tinyint(1) DEFAULT '0',
   `cost` decimal(10,2) NOT NULL,
   PRIMARY KEY (`ingredient_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `menu`;
 CREATE TABLE `menu` (
@@ -104,7 +104,7 @@ CREATE TABLE `menu` (
   `menu_name` varchar(100) NOT NULL,
   `type` enum('Pizza','Drink','Dessert') DEFAULT NULL,
   PRIMARY KEY (`menu_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `menu_item`;
 CREATE TABLE `menu_item` (
@@ -113,7 +113,7 @@ CREATE TABLE `menu_item` (
   `type` enum('Pizza','Drink','Dessert') NOT NULL,
   `price` decimal(10,2) NOT NULL,
   PRIMARY KEY (`menu_item_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `order_item`;
 CREATE TABLE `order_item` (
@@ -127,7 +127,7 @@ CREATE TABLE `order_item` (
   KEY `menu_item_id` (`menu_item_id`),
   CONSTRAINT `order_item_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `customerorder` (`order_id`) ON DELETE CASCADE,
   CONSTRAINT `order_item_ibfk_2` FOREIGN KEY (`menu_item_id`) REFERENCES `menu_item` (`menu_item_id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `pizza`;
 CREATE TABLE `pizza` (
@@ -141,7 +141,7 @@ CREATE TABLE `pizza` (
   `vat` decimal(5,2) NOT NULL,
   `base_price` decimal(10,2) NOT NULL DEFAULT '0.00',
   PRIMARY KEY (`pizza_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `pizza_ingredient`;
 CREATE TABLE `pizza_ingredient` (
@@ -153,14 +153,14 @@ CREATE TABLE `pizza_ingredient` (
   KEY `ingredient_id` (`ingredient_id`),
   CONSTRAINT `fk_pizza_ingredient_ingredient` FOREIGN KEY (`ingredient_id`) REFERENCES `ingredient` (`ingredient_id`) ON DELETE CASCADE,
   CONSTRAINT `fk_pizza_ingredient_pizza` FOREIGN KEY (`pizza_id`) REFERENCES `pizza` (`pizza_id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `postalcodearea`;
 CREATE TABLE `postalcodearea` (
   `postal_code` varchar(10) NOT NULL,
   `city` varchar(100) NOT NULL,
   PRIMARY KEY (`postal_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `staff`;
 CREATE TABLE `staff` (
@@ -171,6 +171,6 @@ CREATE TABLE `staff` (
   `role` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`staff_id`),
   UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

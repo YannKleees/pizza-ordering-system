@@ -198,116 +198,120 @@ class MenuManagement:
             add_window.destroy()
             return
 
-    def save_menu_item():
-        logger.info("Attempting to save new menu item.")
-        category = category_combobox.get()
-        name = name_entry.get().strip()
+        def save_menu_item():
+            logger.info("Attempting to save new menu item.")
+            category = category_combobox.get()
+            name = name_entry.get().strip()
 
-        if not name:
-            messagebox.showerror("Input Error", "Please enter the name of the menu item.")
-            logger.warning("Save failed: Name field is empty.")
-            return
+            if not name:
+                messagebox.showerror("Input Error", "Please enter the name of the menu item.")
+                logger.warning("Save failed: Name field is empty.")
+                return
 
-        try:
-            # Calculate price automatically based on ingredients if Pizza
-            if category == "Pizza":
-                selected_indices = ingredients_listbox.curselection()
-                selected_ingredient_ids = [all_ingredients[i]['ingredient_id'] for i in selected_indices]
+            try:
+                # Calculate price automatically based on ingredients if Pizza
+                if category == "Pizza":
+                    selected_indices = ingredients_listbox.curselection()
+                    selected_ingredient_ids = [all_ingredients[i]['ingredient_id'] for i in selected_indices]
 
-                if not selected_ingredient_ids:
-                    messagebox.showerror("Input Error", "Please select at least one ingredient for Pizza.")
-                    logger.warning("Save failed: No ingredients selected for Pizza.")
-                    return
+                    if not selected_ingredient_ids:
+                        messagebox.showerror("Input Error", "Please select at least one ingredient for Pizza.")
+                        logger.warning("Save failed: No ingredients selected for Pizza.")
+                        return
 
-                # Calculate total ingredient cost
-                format_strings = ','.join(['%s'] * len(selected_ingredient_ids))
-                self.cursor.execute(f"""
-                    SELECT SUM(cost) AS total_cost
-                    FROM ingredient
-                    WHERE ingredient_id IN ({format_strings})
-                """, tuple(selected_ingredient_ids))
-                result = self.cursor.fetchone()
-                total_cost = Decimal(str(result['total_cost'])) if result['total_cost'] else Decimal('0.00')
+                    # Calculate total ingredient cost
+                    format_strings = ','.join(['%s'] * len(selected_ingredient_ids))
+                    self.cursor.execute(f"""
+                        SELECT SUM(cost) AS total_cost,
+                               MIN(is_vegetarian) AS all_vegetarian, MIN(is_vegan) AS all_vegan
+                        FROM ingredient
+                        WHERE ingredient_id IN ({format_strings})
+                    """, tuple(selected_ingredient_ids))
+                    result = self.cursor.fetchone()
+                    total_cost = Decimal(str(result['total_cost'])) if result['total_cost'] else Decimal('0.00')
+                    # A pizza is vegetarian (vegan) only if every ingredient is
+                    is_vegetarian = int(result['all_vegetarian'] or 0)
+                    is_vegan = int(result['all_vegan'] or 0)
 
-                # Define profit margin and VAT as Decimal
-                profit_margin = Decimal('0.40')  # 40%
-                vat = Decimal('0.09')             # 9%
-                base_price = Decimal('0.00')      # Assuming base price is 0.00
+                    # Define profit margin and VAT as Decimal
+                    profit_margin = Decimal('0.40')  # 40%
+                    vat = Decimal('0.09')             # 9%
+                    base_price = Decimal('0.00')      # Assuming base price is 0.00
 
-                # Calculate final price using Decimal arithmetic
-                final_price = (total_cost + base_price) * (Decimal('1.00') + profit_margin) * (Decimal('1.00') + vat)
-                final_price = final_price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    # Calculate final price using Decimal arithmetic
+                    final_price = (total_cost + base_price) * (Decimal('1.00') + profit_margin) * (Decimal('1.00') + vat)
+                    final_price = final_price.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-                if final_price <= Decimal('0.00'):
-                    raise ValueError("Calculated price must be greater than zero.")
+                    if final_price <= Decimal('0.00'):
+                        raise ValueError("Calculated price must be greater than zero.")
 
-            else:
-                # For Drink and Dessert, prompt for price
-                price_input = simpledialog.askfloat("Input", "Enter the price (€):", minvalue=0.0)
-                if price_input is None:
-                    logger.info("Save cancelled by user.")
-                    return  # User cancelled
+                else:
+                    # For Drink and Dessert, prompt for price
+                    price_input = simpledialog.askfloat("Input", "Enter the price (€):", minvalue=0.0)
+                    if price_input is None:
+                        logger.info("Save cancelled by user.")
+                        return  # User cancelled
 
-                # Ensure that price_input is a valid float
-                if not isinstance(price_input, (float, int)):
-                    raise ValueError("Invalid price input.")
+                    # Ensure that price_input is a valid float
+                    if not isinstance(price_input, (float, int)):
+                        raise ValueError("Invalid price input.")
 
-                final_price = Decimal(str(round(price_input, 2))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    final_price = Decimal(str(round(price_input, 2))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-                if final_price <= Decimal('0.00'):
-                    raise ValueError("Price must be greater than zero.")
+                    if final_price <= Decimal('0.00'):
+                        raise ValueError("Price must be greater than zero.")
 
-        except Exception as e:
-            messagebox.showerror("Calculation Error", f"Failed to calculate price: {e}")
-            logger.error(f"Price calculation failed: {e}")
-            return
+            except Exception as e:
+                messagebox.showerror("Calculation Error", f"Failed to calculate price: {e}")
+                logger.error(f"Price calculation failed: {e}")
+                return
 
-        try:
-            # Insert into menu_item table with final_price as float
-            self.cursor.execute(
-                "INSERT INTO menu_item (name, type, price) VALUES (%s, %s, %s)",
-                (name, category, float(final_price))  # Convert Decimal to float
-            )
-            menu_item_id = self.cursor.lastrowid
-            logger.info(f"Inserted menu_item '{name}' with ID {menu_item_id}.")
-
-            if category == "Pizza":
-                # Insert into pizza table with appropriate conversions
+            try:
+                # Insert into menu_item table with final_price as float
                 self.cursor.execute(
-                    "INSERT INTO pizza (pizza_id, name, size, price, is_vegetarian, is_vegan, profit_margin, vat, base_price) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                    (
-                        menu_item_id,
-                        name,
-                        'Medium',
-                        float(final_price),      # Convert Decimal to float
-                        0,                        # is_vegetarian
-                        0,                        # is_vegan
-                        float(profit_margin),     # Convert Decimal to float
-                        float(vat),               # Convert Decimal to float
-                        float(base_price)         # Convert Decimal to float
-                    )
+                    "INSERT INTO menu_item (name, type, price) VALUES (%s, %s, %s)",
+                    (name, category, float(final_price))  # Convert Decimal to float
                 )
-                logger.info(f"Inserted pizza '{name}' with ID {menu_item_id}.")
+                menu_item_id = self.cursor.lastrowid
+                logger.info(f"Inserted menu_item '{name}' with ID {menu_item_id}.")
 
-                # Insert into pizza_ingredient table
-                for ingredient_id in selected_ingredient_ids:
+                if category == "Pizza":
+                    # Insert into pizza table with appropriate conversions
                     self.cursor.execute(
-                        "INSERT INTO pizza_ingredient (pizza_id, ingredient_id) VALUES (%s, %s)",
-                        (menu_item_id, ingredient_id)
+                        "INSERT INTO pizza (pizza_id, name, size, price, is_vegetarian, is_vegan, profit_margin, vat, base_price) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (
+                            menu_item_id,
+                            name,
+                            'Medium',
+                            float(final_price),      # Convert Decimal to float
+                            is_vegetarian,
+                            is_vegan,
+                            float(profit_margin),     # Convert Decimal to float
+                            float(vat),               # Convert Decimal to float
+                            float(base_price)         # Convert Decimal to float
+                        )
                     )
-                    logger.info(f"Linked ingredient ID {ingredient_id} to pizza ID {menu_item_id}.")
+                    logger.info(f"Inserted pizza '{name}' with ID {menu_item_id}.")
 
-            self.connection.commit()
-            logger.info(f"Menu item '{name}' added successfully.")
-            messagebox.showinfo("Success", f"{category} '{name}' added successfully with price €{final_price:.2f}.")
-            add_window.destroy()
-            self.populate_menu_items()
-        except Exception as e:
-            messagebox.showerror("Database Error", f"Failed to add menu item: {e}")
-            logger.error(f"Error adding menu item: {e}")
-            self.connection.rollback()
+                    # Insert into pizza_ingredient table
+                    for ingredient_id in selected_ingredient_ids:
+                        self.cursor.execute(
+                            "INSERT INTO pizza_ingredient (pizza_id, ingredient_id) VALUES (%s, %s)",
+                            (menu_item_id, ingredient_id)
+                        )
+                        logger.info(f"Linked ingredient ID {ingredient_id} to pizza ID {menu_item_id}.")
 
+                self.connection.commit()
+                logger.info(f"Menu item '{name}' added successfully.")
+                messagebox.showinfo("Success", f"{category} '{name}' added successfully with price €{final_price:.2f}.")
+                add_window.destroy()
+                self.populate_menu_items()
+            except Exception as e:
+                messagebox.showerror("Database Error", f"Failed to add menu item: {e}")
+                logger.error(f"Error adding menu item: {e}")
+                self.connection.rollback()
 
+        ttk.Button(add_window, text="Save", bootstyle="success", command=save_menu_item).pack(pady=20)
 
     def edit_menu_item(self):
         """Edit the selected menu item."""
