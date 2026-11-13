@@ -1,11 +1,12 @@
 /* Vibe coded: this web interface was written with an AI assistant in 2026.
-   The staff pages. Same parts as the shop, with cobalt as the working colour. */
+   The staff pages. Same parts as the shop, with a dark sidebar. */
 
 .btn-danger { background: var(--tomato); color: #fff; }
+.staff .poster { background: var(--night); }
 
 .shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100dvh; }
 .side {
-  position: sticky; top: 0; height: 100dvh; background: var(--cobalt); color: #fff; border-right: var(--line);
+  position: sticky; top: 0; height: 100dvh; background: var(--night); color: #fff; border-right: var(--line);
   display: flex; flex-direction: column; gap: 1.5rem; padding: 1.25rem 0.9rem;
 }
 .side .wordmark { font-size: 1.45rem; padding-inline: 0.5rem; }
@@ -20,7 +21,7 @@
 .side nav .n { background: var(--tomato); color: #fff; border: 2px solid var(--ink); border-radius: 999px; min-width: 1.7em; text-align: center; font-size: 0.82rem; line-height: 1.5; }
 .side .who { margin-top: auto; padding-inline: 0.5rem; display: grid; gap: 0.3rem; font-size: 0.95rem; }
 .side .btn-plain { color: #fff; justify-self: start; }
-.side .btn-plain:hover { color: var(--cobalt-tint); }
+.side .btn-plain:hover { color: var(--tomato-tint); }
 .side :focus-visible { outline-color: #fff; }
 
 .main { padding: clamp(1.25rem, 3vw, 2.25rem); min-width: 0; }
@@ -32,7 +33,7 @@
 .couriers { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
 .courier { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.75rem; border: 2px solid var(--ink); border-radius: 999px; background: var(--flour); font-weight: 600; font-size: 0.95rem; }
 .courier i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--ink); background: var(--flour); }
-.courier.free i { background: var(--cobalt); }
+.courier.free i { background: var(--ink); }
 .courier.out { background: var(--dough); color: var(--ink-soft); border-style: dashed; }
 
 .board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; align-items: start; }
@@ -47,13 +48,33 @@
 .ticket .to { font-size: 0.93rem; color: var(--ink-soft); }
 .ticket .btn { width: 100%; }
 
+/* ---------- delivery map */
+.board.is-map { grid-template-columns: minmax(0, 1.5fr) minmax(290px, 1fr); }
+.map-card { padding: 0.75rem; display: grid; gap: 0.6rem; position: sticky; top: 1rem; }
+.area-map { display: block; width: 100%; height: auto; background: var(--dough); border: 1.5px solid var(--dough-deep); border-radius: 10px; }
+.area-map text { font-family: var(--font); pointer-events: none; }
+.area-map [role="button"] { cursor: pointer; outline: none; }
+.area-map [role="button"]:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; border-radius: 50%; }
+.area-map .area, .area-map .pin { transform-box: fill-box; transform-origin: center; transition: transform 200ms var(--spring); }
+.area-map .area.is-active:hover { transform: scale(1.06); }
+.area-map .pin:hover, .area-map .pin.hot { transform: scale(1.28); }
+.area-map .route { animation: march 1s linear infinite; }
+@keyframes march { to { stroke-dashoffset: -11; } }
+.legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; font-size: 0.88rem; font-weight: 600; color: var(--ink-soft); padding-inline: 0.25rem; }
+.legend i { display: inline-block; width: 12px; height: 12px; margin-right: 0.35rem; border: 2px solid var(--ink); border-radius: 50%; vertical-align: -1px; }
+.map-card .hint { padding-inline: 0.25rem; }
+.map-list .to { padding-inline: 0.3rem; font-size: 0.93rem; color: var(--ink-soft); }
+.ticket.flash { animation: flash 1100ms var(--ease-out); }
+@keyframes flash { 0%, 45% { background: var(--tomato-tint); } }
+@media (prefers-reduced-motion: reduce) { .area-map .route { animation: none; } }
+
 /* ---------- tables */
 .table-wrap { background: var(--flour); border: var(--line); border-radius: var(--radius); overflow: auto; }
 table { width: 100%; border-collapse: collapse; }
 th { text-align: left; font-size: 0.88rem; font-weight: 700; color: var(--ink-soft); padding: 0.7rem 1rem; border-bottom: var(--line); white-space: nowrap; background: var(--flour); position: sticky; top: 0; }
 td { padding: 0.6rem 1rem; border-bottom: 2px solid var(--dough); vertical-align: middle; }
 tr:last-child td { border-bottom: 0; }
-tbody tr:hover td { background: #fffdf7; }
+tbody tr:hover td { background: var(--dough); }
 td.num, th.num { text-align: right; }
 td.actions { text-align: right; white-space: nowrap; }
 td.actions .btn { margin-left: 0.4rem; }
@@ -61,7 +82,7 @@ td .mini { width: 44px; height: 44px; display: block; }
 td .sub { font-size: 0.9rem; color: var(--ink-soft); }
 .tabs { display: inline-flex; border: var(--line); border-radius: 999px; background: var(--flour); padding: 3px; }
 .tabs button { background: none; border: 0; border-radius: 999px; padding: 0.4rem 1rem; font-weight: 700; transition: background-color 180ms var(--ease-out), color 180ms; }
-.tabs button[aria-selected="true"] { background: var(--cobalt); color: #fff; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--flour); }
 
 /* ---------- menu item editor */
 .builder { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 1.25rem; align-items: start; }
@@ -70,8 +91,8 @@ td .sub { font-size: 0.9rem; color: var(--ink-soft); }
 .builder .preview .price { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; }
 .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 0.4rem; max-height: 340px; overflow: auto; padding: 2px; }
 .pick { display: flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.6rem; border: 2px solid var(--dough-deep); border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.93rem; transition: background-color 120ms, border-color 120ms; }
-.pick:has(input:checked) { border-color: var(--ink); background: var(--cobalt-tint); }
-.pick input { accent-color: var(--cobalt); width: 16px; height: 16px; }
+.pick:has(input:checked) { border-color: var(--ink); background: var(--tomato-tint); }
+.pick input { accent-color: var(--tomato); width: 16px; height: 16px; }
 .pick small { margin-left: auto; color: var(--ink-soft); font-weight: 400; }
 
 /* ---------- receipt */
@@ -85,14 +106,14 @@ td .sub { font-size: 0.9rem; color: var(--ink-soft); }
 .figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
 .figure { padding: 1rem 1.2rem; }
 .figure .big { font-size: 2.3rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
-.figure.lead { background: var(--cobalt); color: #fff; box-shadow: var(--pop); }
+.figure.lead { background: var(--night); color: #fff; box-shadow: var(--pop); }
 .charts { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1.25rem; margin-bottom: 1.5rem; }
 .chart { padding: 1.1rem 1.2rem; display: grid; gap: 0.8rem; align-content: start; }
 .chart svg { width: 100%; height: auto; display: block; overflow: visible; }
 .chart text { font: 600 11px var(--font); fill: var(--ink-soft); }
 .bar-row { display: grid; gap: 0.25rem; }
 .bar-row .bar { height: 18px; border: 2px solid var(--ink); border-radius: 999px; background: var(--dough); overflow: hidden; }
-.bar-row .bar i { display: block; height: 100%; background: var(--cobalt); border-right: 2px solid var(--ink); transition: width 500ms var(--ease-out); }
+.bar-row .bar i { display: block; height: 100%; background: var(--tomato); border-right: 2px solid var(--ink); transition: width 500ms var(--ease-out); }
 
 .empty { text-align: center; padding: 2.5rem 1rem; display: grid; gap: 0.6rem; justify-items: center; }
 
@@ -102,7 +123,8 @@ td .sub { font-size: 0.9rem; color: var(--ink-soft); }
   .side nav { grid-auto-flow: column; }
   .side nav button { white-space: nowrap; gap: 0.4rem; }
   .side .who { margin: 0 0 0 auto; grid-auto-flow: column; align-items: center; white-space: nowrap; }
-  .board, .charts { grid-template-columns: 1fr; }
+  .board, .board.is-map, .charts { grid-template-columns: 1fr; }
+  .map-card { position: static; }
   .builder { grid-template-columns: 1fr; }
   .builder .preview { position: static; max-width: 160px; margin: 0 auto; }
 }

@@ -1,15 +1,16 @@
 /* Vibe coded: this web interface was written with an AI assistant in 2026.
    Draws every menu item from its data. A pizza is built from the ingredient list stored in the
-   database, in a three-ink print style: tomato red, cobalt blue (which stands in for everything
-   green) and black line, on dough colours. The same pizza always looks the same. */
+   database, in a flat print style: tomato red, a quiet leaf green for vegetables and black line,
+   on dough colours. The same pizza always looks the same. */
 
 const INK = "#000";
-const TOMATO = "#E2231A";
+const TOMATO = "#DA251C";
 const TOMATO_DEEP = "#8E1A12";
 const TOMATO_TINT = "#F29C8E";
-const COBALT = "#1B3BD0";
-const COBALT_TINT = "#B9C5F4";
-const FLOUR = "#FAF4E4";
+const LEAF = "#3F6B3A"; // the one colour outside the palette, used only inside the drawings
+const LEAF_TINT = "#CBD9B8";
+const WATER = "#E6E1D6";
+const FLOUR = "#FFFEFB";
 const CHEESE = "#FFF1BF";
 const GOLD = "#E3B04B";
 
@@ -49,16 +50,16 @@ const TOPPINGS = {
   "chicken": [chunk(FLOUR), 6],
   "pineapple": [chunk(GOLD), 6],
   "feta cheese": [chunk("#fff"), 6],
-  "artichokes": [chunk(COBALT_TINT), 5],
+  "artichokes": [chunk(LEAF_TINT), 5],
   "onions": [ring(6, FLOUR), 6],
-  "red onions": [ring(6.5, COBALT), 6],
-  "green peppers": [ring(5.5, COBALT), 6],
-  "jalapenos": [ring(4, COBALT), 7],
+  "red onions": [ring(6.5, LEAF), 6],
+  "green peppers": [ring(5.5, LEAF), 6],
+  "jalapenos": [ring(4, LEAF), 7],
   "red peppers": [ring(5.5, TOMATO), 6],
   "black olives": [`<circle r="4.2" fill="none" stroke="${INK}" stroke-width="3.6"/>`, 8],
-  "kalamata olives": [`<circle r="4.6" fill="${COBALT}" stroke="${INK}" stroke-width="3"/>`, 7],
+  "kalamata olives": [`<circle r="4.6" fill="${LEAF}" stroke="${INK}" stroke-width="3"/>`, 7],
   "mushrooms": [`<path d="M-8 0a8 7 0 0 1 16 0Zm5 0h6v5a3 3 0 0 1-6 0Z" fill="${FLOUR}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>`, 6],
-  "spinach": [`<path d="M-9 0Q0-9 9 0 0 9-9 0Z" fill="${COBALT}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M-6 0H6" stroke="${COBALT_TINT}" stroke-width="1.2"/>`, 6],
+  "spinach": [`<path d="M-9 0Q0-9 9 0 0 9-9 0Z" fill="${LEAF}" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/><path d="M-6 0H6" stroke="${LEAF_TINT}" stroke-width="1.2"/>`, 6],
   "shrimp": [crescent(TOMATO_TINT), 5],
   "clams": [crescent(FLOUR), 5],
   "garlic": [`<circle r="2.6" fill="${FLOUR}" stroke="${INK}" stroke-width="1.5"/>`, 9],
@@ -145,7 +146,7 @@ const CAN = (body, band) => `<svg viewBox="0 0 200 200" role="img" aria-label="D
 const BOTTLE = (body) => `<svg viewBox="0 0 200 200" role="img" aria-label="Drawing of a bottle">
   <path d="M92 26h28v24c0 10 14 16 14 34v80a10 10 0 0 1-10 10H88a10 10 0 0 1-10-10V84c0-18 14-24 14-34Z" fill="${INK}" transform="translate(6 6)"/>
   <path d="M86 20h28v24c0 10 14 16 14 34v80a10 10 0 0 1-10 10H82a10 10 0 0 1-10-10V78c0-18 14-24 14-34Z" fill="${body}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
-  <rect x="84" y="14" width="32" height="12" rx="3" fill="${COBALT}" stroke="${INK}" stroke-width="3"/>
+  <rect x="84" y="14" width="32" height="12" rx="3" fill="${TOMATO}" stroke="${INK}" stroke-width="3"/>
   <rect x="72" y="96" width="56" height="34" fill="${FLOUR}" stroke="${INK}" stroke-width="3"/>
 </svg>`;
 
@@ -169,8 +170,8 @@ export function itemArt(item) {
   if (item.type === "Pizza") return pizzaArt(item.ingredients || [], item.id);
   const name = item.name.toLowerCase();
   if (item.type === "Drink") {
-    if (/water|juice|tea|lemonade/.test(name)) return BOTTLE(/water/.test(name) ? COBALT_TINT : GOLD);
-    if (/sprite/.test(name)) return CAN(COBALT_TINT, COBALT);
+    if (/water|juice|tea|lemonade/.test(name)) return BOTTLE(/water/.test(name) ? WATER : GOLD);
+    if (/sprite/.test(name)) return CAN(LEAF_TINT, LEAF);
     if (/fanta|root/.test(name)) return CAN(GOLD, FLOUR);
     return CAN(TOMATO, FLOUR);
   }

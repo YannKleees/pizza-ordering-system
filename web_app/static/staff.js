@@ -2,9 +2,11 @@
    The staff pages: live orders, couriers, menu, ingredients, discount codes, history, earnings. */
 import { $, $$, api, busy, esc, money, odo, passwordField, shake, sheet, toast, when, wirePassword, wordmark } from "./ui.js";
 import { itemArt, pizzaArt } from "./pizza-art.js";
+import { areaMap, onMap } from "./area-map.js";
 
 const app = $("#app");
-const state = { me: null, view: "board", board: null, menuTab: "Pizza", timers: [], report: {} };
+const state = { me: null, view: "board", board: null, menuTab: "Pizza", timers: [], report: {}, area: null, seen: null, signature: "" };
+try { state.boardMode = localStorage.getItem("boardMode") === "map" ? "map" : "lanes"; } catch { state.boardMode = "lanes"; }
 
 const VIEWS = [["board", "Orders"], ["couriers", "Couriers"], ["menu", "Menu"], ["ingredients", "Ingredients"],
   ["codes", "Discount codes"], ["history", "History"], ["earnings", "Earnings"]];
@@ -123,7 +125,7 @@ function ticket(order) {
   else action = `<p class="to">With ${esc(order.delivery_person_name || "a courier")}.</p><button class="btn btn-lead btn-small" data-act="delivered" data-id="${order.order_id}">Mark delivered</button>`;
   return `
     <article class="card ticket ${late ? "is-late" : ""}" data-order="${order.order_id}">
-      <div class="ticket-top"><strong>No. ${order.order_id}</strong><span class="tag ${pickup ? "tag-ink" : "tag-blue"}">${pickup ? "Pickup" : "Delivery"}</span></div>
+      <div class="ticket-top"><strong>No. ${order.order_id}</strong><span class="tag ${pickup ? "tag-ink" : ""}">${pickup ? "Pickup" : "Delivery"}</span></div>
       <div><strong>${esc(order.customer_name)} ${esc(order.last_name || "")}</strong>
         <div class="to">${pickup ? "Collects at the counter" : esc(order.address)}</div>
         <div class="to">${minutesAgo(order.order_date)}${late ? ", over 30 minutes" : ""}</div></div>
@@ -133,43 +135,111 @@ function ticket(order) {
     </article>`;
 }
 
-function paintBoard() {
+function paintLanes(host) {
   const board = state.board;
-  const host = $(".board");
-  if (!host || !board) return;
   // FLIP: remember where each ticket is, repaint, then let it travel from the old place
   const before = new Map($$(".ticket", host).map((el) => [el.dataset.order, el.getBoundingClientRect()]));
-  $(".couriers").innerHTML = board.couriers.map((c) =>
-    `<span class="courier ${c.availability ? "free" : "out"}"><i></i>${esc(c.name)} <span class="muted">${esc(c.assigned_postal_code)}</span>${c.availability ? "" : " out"}</span>`).join("")
-    || `<span class="muted">No couriers yet. Add them under Couriers.</span>`;
   host.innerHTML = LANES.map(([status, label]) => {
     const orders = board.orders.filter((o) => o.status === status);
     return `<section class="lane" aria-label="${label}"><h2><span>${label}</span><span>${orders.length}</span></h2>
       ${orders.map(ticket).join("") || `<p class="none">Nothing here.</p>`}</section>`;
   }).join("");
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   $$(".ticket", host).forEach((el) => {
     const old = before.get(el.dataset.order);
     const now = el.getBoundingClientRect();
-    if (reduce) return;
     if (!old) return before.size && el.animate([{ opacity: 0, transform: "scale(0.92)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: "cubic-bezier(0.23,1,0.32,1)" });
     const dx = old.left - now.left, dy = old.top - now.top;
     if (dx || dy) el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 360, easing: "cubic-bezier(0.23,1,0.32,1)" });
   });
+}
+
+function paintMap(host) {
+  const board = state.board;
+  const deliveries = board.orders.filter((o) => o.delivery_method === "Delivery");
+  const offMap = deliveries.filter((o) => !onMap(o.postal_code));
+  const list = deliveries.filter((o) => !state.area || o.postal_code === state.area);
+  const pickups = board.orders.length - deliveries.length;
+  const crew = state.area ? board.couriers.filter((c) => c.assigned_postal_code === state.area) : [];
+  host.innerHTML = `
+    <div class="card map-card">
+      ${areaMap({ orders: board.orders, couriers: board.couriers, selected: state.area })}
+      <div class="legend">
+        <span><i style="background:#FFFEFB"></i>In the kitchen</span>
+        <span><i style="background:#DA251C"></i>Ready</span>
+        <span><i style="background:#000"></i>On its way</span>
+        <span>● courier available</span><span>○ courier out</span>
+      </div>
+      <p class="hint">A drawing of the postal areas around the Maas, not a street map. Select an area to see its orders.</p>
+      ${offMap.length ? `<p class="hint"><strong>Not on the map:</strong> ${offMap.map((o) => `no. ${o.order_id} (${esc(o.postal_code === "Unknown" ? "no postal code" : o.postal_code)})`).join(", ")}</p>` : ""}
+    </div>
+    <section class="lane map-list" aria-label="Deliveries">
+      <h2><span>${state.area ? `Deliveries to ${esc(state.area)}` : "Open deliveries"}</span><span>${list.length}</span></h2>
+      ${state.area ? `<p class="to">${crew.length ? crew.map((c) => `${esc(c.name)} is ${c.availability ? "available" : "out"}`).join(", ") + "." : "No courier covers this area."}</p>
+        <button class="btn btn-small" data-act="area-clear">Show all areas</button>` : ""}
+      ${list.map(ticket).join("") || `<p class="none">${state.area ? "No open deliveries in this area." : "No open deliveries."}</p>`}
+      ${pickups ? `<p class="to">${pickups} pickup ${pickups === 1 ? "order is" : "orders are"} on the board.</p>` : ""}
+    </section>`;
+}
+
+function paintBoard() {
+  const board = state.board;
+  const host = $(".board");
+  if (!host || !board) return;
+  $(".couriers").innerHTML = board.couriers.map((c) =>
+    `<span class="courier ${c.availability ? "free" : "out"}"><i></i>${esc(c.name)} <span class="muted">${esc(c.assigned_postal_code)}</span>${c.availability ? "" : " out"}</span>`).join("")
+    || `<span class="muted">No couriers yet. Add them under Couriers.</span>`;
+  const map = state.boardMode === "map";
+  host.classList.toggle("is-map", map);
+  map ? paintMap(host) : paintLanes(host);
+}
+
+function selectArea(code, orderId) {
+  state.area = orderId ? code : state.area === code ? null : code;
+  paintBoard();
+  const target = orderId ? $(`.ticket[data-order="${orderId}"]`) : null;
+  if (target) {
+    target.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    target.classList.add("flash");
+  } else {
+    $(`.area[data-area="${code}"]`)?.focus({ preventScroll: true });
+  }
+}
+
+function noticeNewOrders(board) {
+  const waiting = board.orders.filter((o) => o.status === "Pending");
   const open = $("[data-open]");
-  const waiting = board.orders.filter((o) => o.status === "Pending").length;
-  open.textContent = waiting;
-  open.classList.toggle("hidden", !waiting);
+  if (open) {
+    open.textContent = waiting.length;
+    open.classList.toggle("hidden", !waiting.length);
+  }
+  document.title = (waiting.length ? `(${waiting.length}) ` : "") + "Pop Pizza staff";
+  if (state.seen) {
+    waiting.filter((o) => !state.seen.has(o.order_id)).forEach((o) =>
+      toast(`New order no. ${o.order_id} from ${o.customer_name}, ${o.delivery_method.toLowerCase()}.`));
+  }
+  state.seen = new Set(board.orders.map((o) => o.order_id));
 }
 
 async function loadBoard() {
-  await guard(async () => { state.board = await api("/api/staff/board"); paintBoard(); });
+  await guard(async () => {
+    const board = await api("/api/staff/board");
+    noticeNewOrders(board);
+    const signature = JSON.stringify(board) + Math.floor(Date.now() / 60000);
+    if (signature === state.signature && $(".board")?.children.length) return;
+    state.signature = signature;
+    state.board = board;
+    paintBoard();
+  });
 }
 
 function renderBoard() {
   $("#view").innerHTML = head("Orders", "Refreshes every 8 seconds.",
-    `<button class="btn btn-lead" data-act="assign">Send couriers out</button>`) +
+    `<div class="tabs" role="tablist" aria-label="View">${[["lanes", "Board"], ["map", "Map"]].map(([mode, label]) =>
+      `<button role="tab" data-act="board-mode" data-mode="${mode}" aria-selected="${state.boardMode === mode}">${label}</button>`).join("")}</div>
+     <button class="btn btn-lead" data-act="assign">Send couriers out</button>`) +
     `<div class="couriers" aria-label="Couriers"></div><div class="board"></div>`;
+  state.signature = "";
   loadBoard();
   state.timers.push(setInterval(() => { if (!document.hidden) loadBoard(); }, 8000));
 }
@@ -194,7 +264,7 @@ async function renderCouriers() {
     state.couriers = couriers;
     $("[data-list]").innerHTML = table(["Name", "Postal code", "Status", ""], couriers.map((c) => `
       <tr><td><strong>${esc(c.name)}</strong></td><td>${esc(c.assigned_postal_code)}</td>
-        <td><span class="tag ${c.availability ? "tag-blue" : "tag-quiet"}">${c.availability ? "Available" : "Out or off"}</span></td>
+        <td><span class="tag ${c.availability ? "" : "tag-quiet"}">${c.availability ? "Available" : "Out or off"}</span></td>
         <td class="actions"><button class="btn btn-small" data-act="courier-edit" data-id="${c.delivery_person_id}">Edit</button><button class="btn btn-small" data-act="courier-delete" data-id="${c.delivery_person_id}">Remove</button></td></tr>`),
       `<h3>No couriers yet</h3><p class="muted">Add one so delivery orders can be sent out.</p>`);
   });
@@ -236,7 +306,7 @@ async function renderMenu() {
     const pizza = state.menuTab === "Pizza";
     const rows = state.menu.filter((i) => i.type === state.menuTab).map((item) => `
       <tr><td style="width:60px"><span class="mini">${itemArt(item)}</span></td>
-        <td><strong>${esc(item.name)}</strong>${item.vegan ? ` <span class="tag tag-blue">Vegan</span>` : item.vegetarian ? ` <span class="tag">Vegetarian</span>` : ""}
+        <td><strong>${esc(item.name)}</strong>${item.vegan ? ` <span class="tag tag-ink">Vegan</span>` : item.vegetarian ? ` <span class="tag">Vegetarian</span>` : ""}
           ${pizza ? `<div class="sub">${esc(item.ingredients.join(", "))}</div>` : ""}</td>
         <td class="num"><strong>${money(item.price)}</strong></td>
         <td class="actions"><button class="btn btn-small" data-act="menu-edit" data-id="${item.id}">Edit</button><button class="btn btn-small" data-act="menu-delete" data-id="${item.id}">Remove</button></td></tr>`);
@@ -290,7 +360,7 @@ async function renderIngredients() {
     state.ingredients = await api("/api/staff/ingredients");
     $("[data-list]").innerHTML = table(["Ingredient", "Diet", "On pizzas", "Cost", ""], state.ingredients.map((g) => `
       <tr><td><strong>${esc(g.name)}</strong></td>
-        <td>${g.is_vegan ? `<span class="tag tag-blue">Vegan</span>` : g.is_vegetarian ? `<span class="tag">Vegetarian</span>` : `<span class="tag tag-quiet">Meat or fish</span>`}</td>
+        <td>${g.is_vegan ? `<span class="tag tag-ink">Vegan</span>` : g.is_vegetarian ? `<span class="tag">Vegetarian</span>` : `<span class="tag tag-quiet">Meat or fish</span>`}</td>
         <td>${g.used_in}</td><td class="num">${money(g.cost)}</td>
         <td class="actions"><button class="btn btn-small" data-act="ingredient-edit" data-id="${g.id}">Edit</button><button class="btn btn-small" data-act="ingredient-delete" data-id="${g.id}">Remove</button></td></tr>`),
       `<h3>No ingredients yet</h3>`);
@@ -328,7 +398,7 @@ async function renderCodes() {
       const expired = c.expiration_date < today();
       return `<tr><td><strong>${esc(c.code)}</strong></td><td class="num">${Number(c.discount_percentage)}%</td>
         <td>${new Date(c.expiration_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</td>
-        <td><span class="tag ${c.is_used || expired ? "tag-quiet" : "tag-blue"}">${c.is_used ? "Used" : expired ? "Expired" : "Open"}</span></td>
+        <td><span class="tag ${c.is_used || expired ? "tag-quiet" : ""}">${c.is_used ? "Used" : expired ? "Expired" : "Open"}</span></td>
         <td class="actions"><button class="btn btn-small" data-act="code-edit" data-id="${esc(c.code)}">Edit</button><button class="btn btn-small" data-act="code-delete" data-id="${esc(c.code)}">Remove</button></td></tr>`;
     }), `<h3>No discount codes</h3><p class="muted">Add a code customers can type in their basket.</p>`);
   });
@@ -357,8 +427,9 @@ function codeSheet(c) {
 
 /* ================================================================ history and receipts */
 
+const STATUS_LABEL = { "Pending": "In the kitchen", "Ready for Delivery": "Ready", "Out for Delivery": "Out for delivery" };
 const statusTag = (status) =>
-  `<span class="tag ${status === "Delivered" ? "tag-ink" : status === "Cancelled" ? "tag-quiet" : "tag-blue"}">${esc(status)}</span>`;
+  `<span class="tag ${status === "Delivered" ? "tag-ink" : status === "Cancelled" ? "tag-quiet" : "tag-red"}">${esc(STATUS_LABEL[status] || status)}</span>`;
 
 async function renderHistory() {
   $("#view").innerHTML = head("History", "Every order, newest first. Open one for its receipt.") + `<div data-list></div>`;
@@ -418,13 +489,13 @@ function lineChart(points) {
   const x = (t) => (t1 === t0 ? (L + W - R) / 2 : L + ((t - t0) / (t1 - t0)) * (W - L - R));
   const y = (v) => T + (1 - v / max) * (H - T - B);
   const grid = [];
-  for (let v = 0; v <= max; v += step) grid.push(`<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${v ? "#DCC89F" : "#000"}" stroke-width="${v ? 1.5 : 2.5}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">€${v}</text>`);
+  for (let v = 0; v <= max; v += step) grid.push(`<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${v ? "#E3DBCB" : "#000"}" stroke-width="${v ? 1.5 : 2.5}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">€${v}</text>`);
   const path = points.map((p, i) => `${i ? "L" : "M"}${x(times[i]).toFixed(1)} ${y(p.earnings).toFixed(1)}`).join("");
   const label = (t) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Earnings per day from ${label(t0)} to ${label(t1)}, highest ${money(top)}">
     ${grid.join("")}
-    <path d="${path}" fill="none" stroke="#1B3BD0" stroke-width="3" stroke-linejoin="round"/>
-    ${points.map((p, i) => `<circle cx="${x(times[i]).toFixed(1)}" cy="${y(p.earnings).toFixed(1)}" r="5" fill="#FBF6E9" stroke="#000" stroke-width="2.5"><title>${label(times[i])}: ${money(p.earnings)}</title></circle>`).join("")}
+    <path d="${path}" fill="none" stroke="#DA251C" stroke-width="3" stroke-linejoin="round"/>
+    ${points.map((p, i) => `<circle cx="${x(times[i]).toFixed(1)}" cy="${y(p.earnings).toFixed(1)}" r="5" fill="#FFFEFB" stroke="#000" stroke-width="2.5"><title>${label(times[i])}: ${money(p.earnings)}</title></circle>`).join("")}
     <text x="${L}" y="${H - 8}">${label(t0)}</text>${t1 !== t0 ? `<text x="${W - R}" y="${H - 8}" text-anchor="end">${label(t1)}</text>` : ""}
   </svg>`;
 }
@@ -478,6 +549,8 @@ function renderEarnings() {
 app.addEventListener("click", async (event) => {
   const nav = event.target.closest(".side [data-view]");
   if (nav) return show(nav.dataset.view);
+  const spot = event.target.closest(".area-map [data-area]");
+  if (spot) return selectArea(spot.dataset.area, spot.dataset.pin);
   const el = event.target.closest("[data-act]");
   if (!el) return;
   const id = el.dataset.id;
@@ -485,9 +558,16 @@ app.addEventListener("click", async (event) => {
   switch (el.dataset.act) {
     case "logout": await api("/api/staff/logout", { method: "POST" }); renderLogin(); break;
     case "ready": case "delivered":
-      await busy(el, () => guard(async () => { await api(`/api/staff/orders/${id}/${el.dataset.act}`, { method: "POST" }); await loadBoard(); }));
+      await busy(el, () => guard(async () => { await api(`/api/staff/orders/${id}/${el.dataset.act}`, { method: "POST" }); state.signature = ""; await loadBoard(); }));
       break;
     case "assign": assign(el); break;
+    case "area-clear": state.area = null; paintBoard(); break;
+    case "board-mode":
+      state.boardMode = el.dataset.mode;
+      try { localStorage.setItem("boardMode", state.boardMode); } catch { /* private window */ }
+      $$("[data-act=board-mode]").forEach((b) => b.setAttribute("aria-selected", b === el));
+      paintBoard();
+      break;
     case "courier-add": courierSheet(); break;
     case "courier-edit": courierSheet(find(state.couriers, "delivery_person_id")); break;
     case "courier-delete": confirmDelete(find(state.couriers, "delivery_person_id").name, `/api/staff/couriers/${id}`, renderCouriers); break;
@@ -504,6 +584,17 @@ app.addEventListener("click", async (event) => {
     case "receipt": receipt(id); break;
   }
 });
+
+app.addEventListener("keydown", (event) => {
+  const spot = event.target.closest?.(".area-map [data-area]");
+  if (spot && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); selectArea(spot.dataset.area, spot.dataset.pin); }
+});
+const linkPin = (event, on) => {
+  const card = event.target.closest?.(".map-list .ticket");
+  if (card) $(`[data-pin="${card.dataset.order}"]`)?.classList.toggle("hot", on);
+};
+app.addEventListener("mouseover", (event) => linkPin(event, true));
+app.addEventListener("mouseout", (event) => linkPin(event, false));
 
 app.addEventListener("submit", (event) => {
   if (event.target.dataset.form !== "earnings") return;

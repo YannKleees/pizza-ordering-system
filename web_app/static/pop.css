@@ -1,7 +1,7 @@
 /* Vibe coded: this web interface was written with an AI assistant in 2026.
    One stylesheet for the shop and the staff pages.
-   Three colours: dough beige for the page, tomato red for what the customer does, cobalt blue for
-   staff work and for focus. Black line and hard offset shadows come from screen printing. */
+   Two colours and black: a light warm paper for the page and tomato red for the action that
+   matters. Black line and small hard shadows come from screen printing. */
 
 @font-face {
   font-family: "Bricolage Grotesque"; font-style: normal; font-weight: 300 800; font-display: swap;
@@ -15,30 +15,28 @@
 }
 
 :root {
-  --dough: #EBDCBF;
-  --dough-deep: #DCC89F;
-  --flour: #FBF6E9;
-  --tomato: #E2231A;
-  --tomato-tint: #F6C6BB;
-  --cobalt: #1B3BD0;
-  --cobalt-tint: #C6D0F6;
+  --dough: #F4F0E8;
+  --dough-deep: #E3DBCB;
+  --flour: #FFFEFB;
+  --tomato: #DA251C;
+  --tomato-tint: #F8DCD6;
   --ink: #000;
-  --ink-soft: #4B4233;
-  --lead: var(--tomato);          /* the colour of the main action; the staff pages switch it to cobalt */
+  --ink-soft: #5B5549;
+  --night: #191614;               /* the staff sidebar */
+  --lead: var(--tomato);          /* the colour of the main action */
   --lead-tint: var(--tomato-tint);
 
-  --line: 2.5px solid var(--ink);
-  --pop: 4px 4px 0 var(--ink);
-  --pop-small: 3px 3px 0 var(--ink);
-  --radius: 16px;
+  --line: 2px solid var(--ink);
+  --pop: 3px 3px 0 var(--ink);
+  --pop-small: 2px 2px 0 var(--ink);
+  --radius: 14px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
   --spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.281 6.7%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067, 1.087 24.6%, 1.085 27.5%, 1.051 31.6%, 1.009 37.2%, 0.993 41.6%, 0.991 47.4%, 1.001 66.3%, 1);
   --font: "Bricolage Grotesque", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
-  --halftone: radial-gradient(circle, rgb(0 0 0 / 0.2) 1.3px, transparent 1.7px);
+  --halftone: radial-gradient(circle, rgb(0 0 0 / 0.13) 1.2px, transparent 1.6px);
   color-scheme: light;
 }
-.staff { --lead: var(--cobalt); --lead-tint: var(--cobalt-tint); }
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -58,8 +56,7 @@ a { color: inherit; }
 .muted { color: var(--ink-soft); }
 .hidden { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-:focus-visible { outline: 3px solid var(--cobalt); outline-offset: 3px; border-radius: 6px; }
-.staff :focus-visible { outline-color: var(--tomato); }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; border-radius: 6px; }
 
 /* ---------- buttons: they sit on a hard shadow and go down when pressed */
 .btn {
@@ -69,8 +66,8 @@ a { color: inherit; }
   font-weight: 700; line-height: 1.1; text-decoration: none; white-space: nowrap;
   transition: transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out), background-color 150ms;
 }
-.btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
-.btn:active, .btn.is-busy { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+.btn:active, .btn.is-busy { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
 .btn:disabled { cursor: default; }
 .btn-lead { background: var(--lead); color: #fff; }
 .btn-big { min-height: 54px; font-size: 1.1rem; padding-inline: 1.5rem; }
@@ -94,11 +91,12 @@ a { color: inherit; }
 .label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
 .input, select.input {
   width: 100%; min-height: 46px; padding: 0.5rem 0.8rem;
-  background: #fffdf7; border: 2px solid var(--ink); border-radius: 10px;
+  background: #fff; border: 1.5px solid var(--ink); border-radius: 10px;
   transition: box-shadow 150ms var(--ease-out), border-color 150ms;
 }
-.input:focus { outline: none; border-color: var(--cobalt); box-shadow: 0 0 0 3px var(--cobalt-tint); }
+.input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px rgb(0 0 0 / 0.16); }
 .input[aria-invalid="true"] { border-color: var(--tomato); box-shadow: 0 0 0 3px var(--tomato-tint); }
+.input[type="search"]::-webkit-search-cancel-button { filter: grayscale(1) brightness(0); cursor: pointer; }
 .input-wrap { position: relative; }
 .input-wrap .input { padding-right: 4.6rem; }
 .input-wrap .btn-plain { position: absolute; right: 0.7rem; top: 50%; translate: 0 -50%; font-size: 0.9rem; }
@@ -114,7 +112,7 @@ a { color: inherit; }
 .segment label + label { border-left: var(--line); }
 .segment input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
 .segment label:has(input:checked) { background: var(--ink); color: var(--flour); }
-.segment label:has(input:focus-visible) { outline: 3px solid var(--cobalt); outline-offset: -5px; }
+.segment label:has(input:focus-visible) { outline: 3px solid var(--tomato); outline-offset: -5px; }
 
 .check { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; }
 .check input { width: 20px; height: 20px; accent-color: var(--lead); }
@@ -126,7 +124,6 @@ a { color: inherit; }
   display: inline-block; padding: 0.1rem 0.55rem; border: 2px solid var(--ink); border-radius: 999px;
   background: var(--flour); font-size: 0.82rem; font-weight: 700; line-height: 1.4; white-space: nowrap;
 }
-.tag-blue { background: var(--cobalt); color: #fff; }
 .tag-red { background: var(--tomato); color: #fff; }
 .tag-ink { background: var(--ink); color: var(--flour); }
 .tag-quiet { border-color: var(--dough-deep); background: var(--dough); color: var(--ink-soft); }
@@ -150,7 +147,7 @@ a { color: inherit; }
 
 /* ---------- dialog */
 dialog.sheet {
-  border: var(--line); border-radius: var(--radius); box-shadow: 8px 8px 0 var(--ink);
+  border: var(--line); border-radius: var(--radius); box-shadow: 6px 6px 0 var(--ink);
   background: var(--flour); color: var(--ink); padding: 0; width: min(94vw, 560px); max-height: 90dvh;
 }
 dialog.sheet[open] { animation: sheet-in 240ms var(--spring); }
@@ -180,7 +177,7 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.45); animation: fade-in 200ms
 @keyframes shake { 20% { transform: translateX(-7px); } 45% { transform: translateX(6px); } 70% { transform: translateX(-4px); } 90% { transform: translateX(2px); } }
 .auth-form { display: grid; gap: 1rem; animation: step-in 200ms var(--ease-out); }
 @keyframes step-in { from { opacity: 0; transform: translateX(14px); } }
-.caps { font-size: 0.88rem; font-weight: 700; color: var(--cobalt); }
+.caps { font-size: 0.88rem; font-weight: 700; color: #B0140C; }
 
 .wordmark { display: inline-flex; align-items: center; white-space: nowrap; flex-shrink: 0; gap: 0.1em; font-weight: 800; font-size: 1.7rem; letter-spacing: -0.04em; line-height: 1; text-decoration: none; }
 .wordmark svg { width: 0.95em; height: 0.95em; margin-inline: 0.03em; }

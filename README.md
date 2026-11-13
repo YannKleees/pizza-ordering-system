@@ -11,7 +11,7 @@ It has two interfaces on the same database and the same ordering logic: the orig
 | ![Old customer app](docs/screenshots/old-customer.png) | ![New customer shop](docs/screenshots/new-customer.png) |
 | ![Old staff app](docs/screenshots/old-staff.png) | ![New staff order board](docs/screenshots/new-staff.png) |
 
-More of the web interface: [login](docs/screenshots/new-login.png), [basket](docs/screenshots/new-basket.png), [order tracking](docs/screenshots/new-orders.png), [menu editor](docs/screenshots/new-menu-editor.png), [earnings](docs/screenshots/new-earnings.png), [phone](docs/screenshots/new-mobile.png).
+More of the web interface: [login](docs/screenshots/new-login.png), [basket](docs/screenshots/new-basket.png), [order tracking](docs/screenshots/new-orders.png), [delivery map](docs/screenshots/new-map.png), [menu editor](docs/screenshots/new-menu-editor.png), [earnings](docs/screenshots/new-earnings.png), [phone](docs/screenshots/new-mobile.png).
 
 The web interface (`web_app/`) is vibe coded: I directed the design and an AI assistant wrote the code. It does not replace the course work. Logging in, the menu, the basket, prices, discount codes, the loyalty count and placing or cancelling an order all run through my original classes in `customer_app/`. The staff pages repeat the SQL and the rules of `staff_app/`, because that code lives inside the Tkinter screens and cannot be imported.
 
@@ -19,7 +19,9 @@ What the web interface adds on top:
 
 - Every pizza is drawn from its ingredient list in the database, so a new pizza gets a picture the moment staff save it
 - A basket that slides in as a receipt, a stamp card for the loyalty count, and order tracking with a five-minute cancel countdown
-- A staff board with the orders in three columns (in the kitchen, ready, out for delivery) that refreshes on its own
+- A staff board with the orders in three columns (in the kitchen, ready, out for delivery) that refreshes on its own and announces new orders
+- A delivery map for staff: the postal areas of Maastricht drawn around the Maas, with the open orders, the couriers and who is on the road (a drawing from the postal codes in the database, no map service involved)
+- Search on the menu by name or ingredient
 - A menu editor that shows the pizza and its calculated price while ingredients are ticked
 - An earnings page with a chart per day and a split by gender
 - Works on a phone and keeps animation to a minimum when the device asks for reduced motion

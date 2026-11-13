@@ -308,20 +308,19 @@ def menu(response: Response, sid: str | None = Cookie(None)):
         items = cursor.fetchall()
         cursor = db.execute_query(
             """
-            SELECT pi.pizza_id, i.ingredient_id, i.name
+            SELECT pi.pizza_id, i.ingredient_id, i.name, i.is_vegetarian, i.is_vegan
             FROM pizza_ingredient pi
             JOIN ingredient i ON i.ingredient_id = pi.ingredient_id
             ORDER BY i.name
             """)
         links = cursor.fetchall()
-        cursor = db.execute_query("SELECT pizza_id, is_vegetarian, is_vegan FROM pizza")
-        flags = {row["pizza_id"]: row for row in cursor.fetchall()}
     for item in items:
         mine = [link for link in links if link["pizza_id"] == item["id"]] if item["type"] == "Pizza" else []
         item["ingredient_ids"] = [link["ingredient_id"] for link in mine]
         item["ingredients"] = [link["name"] for link in mine]
-        item["vegetarian"] = bool(flags.get(item["id"], {}).get("is_vegetarian")) if item["type"] == "Pizza" else False
-        item["vegan"] = bool(flags.get(item["id"], {}).get("is_vegan")) if item["type"] == "Pizza" else False
+        # a pizza is vegetarian or vegan when every ingredient is, the same rule the shop uses
+        item["vegetarian"] = bool(mine) and all(link["is_vegetarian"] for link in mine)
+        item["vegan"] = bool(mine) and all(link["is_vegan"] for link in mine)
     return plain(items)
 
 

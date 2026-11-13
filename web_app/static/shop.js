@@ -7,7 +7,7 @@ import { itemArt, pizzaArt } from "./pizza-art.js";
 const app = $("#app");
 const state = {
   me: null, menu: [], basket: null, orders: [],
-  view: "menu", tab: "Pizza", vegetarian: false, vegan: false,
+  view: "menu", tab: "Pizza", vegetarian: false, vegan: false, query: "",
   method: "Delivery", placed: null, timers: [],
 };
 
@@ -205,8 +205,10 @@ function footHTML(item) {
 }
 
 function visibleItems() {
+  const words = state.query.toLowerCase().split(/\s+/).filter(Boolean);
   return state.menu.filter((item) => item.type === state.tab
-    && (!state.vegetarian || item.vegetarian) && (!state.vegan || item.vegan));
+    && (state.tab !== "Pizza" || ((!state.vegetarian || item.vegetarian) && (!state.vegan || item.vegan)))
+    && words.every((word) => (item.name + " " + item.ingredients.join(" ")).toLowerCase().includes(word)));
 }
 
 function renderMenu(arriving = true) {
@@ -229,6 +231,8 @@ function renderMenu(arriving = true) {
           <button class="chip" data-act="diet" data-diet="vegetarian" aria-pressed="${state.vegetarian}">Vegetarian</button>
           <button class="chip" data-act="diet" data-diet="vegan" aria-pressed="${state.vegan}">Vegan</button>
         </span>
+        <label class="search"><span class="sr-only">Search the menu</span>
+          <input class="input" type="search" id="menu-search" placeholder="Search by name or ingredient" autocomplete="off" value="${esc(state.query)}"></label>
       </div>
       <div class="menu ${arriving ? "arriving" : ""}"></div>
     </div>`;
@@ -241,7 +245,7 @@ function renderCards() {
     <article class="card item" data-item="${item.id}" style="--i:${Math.min(i, 14)}">
       <div class="art ${["", "t1", "t2"][item.id % 3]}">
         ${itemArt(item)}
-        <div class="tags">${item.vegan ? `<span class="tag tag-blue">Vegan</span>` : item.vegetarian ? `<span class="tag">Vegetarian</span>` : ""}</div>
+        <div class="tags">${item.vegan ? `<span class="tag tag-ink">Vegan</span>` : item.vegetarian ? `<span class="tag">Vegetarian</span>` : ""}</div>
       </div>
       <div class="item-body">
         <h3>${esc(item.name)}</h3>
@@ -249,7 +253,7 @@ function renderCards() {
         <div class="item-foot">${footHTML(item)}</div>
       </div>
     </article>`).join("")
-    : `<div class="card empty" style="grid-column:1/-1"><h3>No ${state.vegan ? "vegan" : "vegetarian"} pizzas on the menu right now</h3><button class="btn" data-act="clear-diet">Show all pizzas</button></div>`;
+    : `<div class="card empty" style="grid-column:1/-1"><h3>Nothing on the menu matches</h3><p class="muted">Try another word, or clear the search and filters.</p><button class="btn" data-act="clear-diet">Clear search and filters</button></div>`;
 }
 
 const sentence = (names) => {
@@ -551,7 +555,7 @@ app.addEventListener("click", async (event) => {
     case "nav": closeBasket(); show(el.dataset.view); break;
     case "tab": state.tab = el.dataset.tab; renderMenu(true); $(`[data-tab="${state.tab}"]`).focus(); break;
     case "diet": state[el.dataset.diet] = !state[el.dataset.diet]; el.setAttribute("aria-pressed", state[el.dataset.diet]); $(".menu").classList.add("arriving"); renderCards(); break;
-    case "clear-diet": state.vegetarian = state.vegan = false; renderMenu(true); break;
+    case "clear-diet": state.vegetarian = state.vegan = false; state.query = ""; renderMenu(true); break;
     case "inc": setQuantity(id, quantityOf(id) + 1); break;
     case "dec": setQuantity(id, quantityOf(id) - 1); break;
     case "open-basket": openBasket(); break;
@@ -580,6 +584,7 @@ app.addEventListener("change", (event) => {
 });
 app.addEventListener("input", (event) => {
   if (event.target.id === "code") { event.target.removeAttribute("aria-invalid"); }
+  if (event.target.id === "menu-search") { state.query = event.target.value; $(".menu").classList.remove("arriving"); renderCards(); }
 });
 document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeBasket(); });
 
