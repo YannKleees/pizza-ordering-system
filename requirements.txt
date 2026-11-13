@@ -1,3 +1,5 @@
 mysql-connector-python==9.0.0
 ttkbootstrap==1.10.1
 matplotlib==3.9.2
+fastapi==0.116.1
+uvicorn==0.35.0

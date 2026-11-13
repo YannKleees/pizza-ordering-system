@@ -1,6 +1,28 @@
 # Pizza ordering system
 
-A desktop pizza shop on a MySQL database, built for the Databases course at Maastricht University (2024). Customers order through one app, staff run the kitchen, deliveries and reporting through another; both share a 16-table relational schema.
+A pizza shop on a MySQL database, built for the Databases course at Maastricht University (2024). Customers order through one app, staff run the kitchen, deliveries and reporting through another; both share a 16-table relational schema.
+
+It has two interfaces on the same database and the same ordering logic: the original desktop apps from 2024 and a web interface added in 2026.
+
+## Old and new interface
+
+| 2024, desktop (Tkinter) | 2026, web |
+| --- | --- |
+| ![Old customer app](docs/screenshots/old-customer.png) | ![New customer shop](docs/screenshots/new-customer.png) |
+| ![Old staff app](docs/screenshots/old-staff.png) | ![New staff order board](docs/screenshots/new-staff.png) |
+
+More of the web interface: [login](docs/screenshots/new-login.png), [basket](docs/screenshots/new-basket.png), [order tracking](docs/screenshots/new-orders.png), [menu editor](docs/screenshots/new-menu-editor.png), [earnings](docs/screenshots/new-earnings.png), [phone](docs/screenshots/new-mobile.png).
+
+The web interface (`web_app/`) is vibe coded: I directed the design and an AI assistant wrote the code. It does not replace the course work. Logging in, the menu, the basket, prices, discount codes, the loyalty count and placing or cancelling an order all run through my original classes in `customer_app/`. The staff pages repeat the SQL and the rules of `staff_app/`, because that code lives inside the Tkinter screens and cannot be imported.
+
+What the web interface adds on top:
+
+- Every pizza is drawn from its ingredient list in the database, so a new pizza gets a picture the moment staff save it
+- A basket that slides in as a receipt, a stamp card for the loyalty count, and order tracking with a five-minute cancel countdown
+- A staff board with the orders in three columns (in the kitchen, ready, out for delivery) that refreshes on its own
+- A menu editor that shows the pizza and its calculated price while ingredients are ticked
+- An earnings page with a chart per day and a split by gender
+- Works on a phone and keeps animation to a minimum when the device asks for reduced motion
 
 ## What it does
 
@@ -23,7 +45,7 @@ A desktop pizza shop on a MySQL database, built for the Databases course at Maas
 
 ## Stack
 
-Python · Tkinter with ttkbootstrap · MySQL (mysql-connector-python) · matplotlib
+Python · MySQL (mysql-connector-python) · Tkinter with ttkbootstrap and matplotlib for the desktop apps · FastAPI with plain HTML, CSS and JavaScript for the web interface
 
 ## Run it
 
@@ -35,13 +57,17 @@ mysql -u root -p < db/seed.sql
 pip install -r requirements.txt
 ```
 
-Set the database login (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`; see `.env.example`), then start either app from the repository root:
+Set the database login (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`; see `.env.example`), then start what you want from the repository root:
 
 ```
 set DB_PASSWORD=your-mysql-password      # macOS/Linux: export DB_PASSWORD=...
-python -m customer_app.main              # log in as demo / demo
-python -m staff_app.main
+
+python -m web_app                        # web: shop at http://127.0.0.1:8000, staff at /staff
+python -m customer_app.main              # desktop customer app
+python -m staff_app.main                 # desktop staff app
 ```
+
+Customers log in as `demo` / `demo`, staff (web only) as `staff` / `staff`. On Windows, `set DB_HOST=127.0.0.1` makes connecting faster than the default `localhost`.
 
 ## Note
 

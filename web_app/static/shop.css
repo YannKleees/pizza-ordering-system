@@ -1,0 +1,143 @@
+/* Vibe coded: this web interface was written with an AI assistant in 2026.
+   The customer shop: menu, basket, orders, profile. */
+
+.btn-danger { background: var(--ink); color: var(--flour); }
+
+.topbar {
+  position: sticky; top: 0; z-index: 20; background: var(--dough); border-bottom: var(--line);
+  display: flex; align-items: center; gap: 1.5rem; padding: 0.7rem clamp(1rem, 3vw, 2.5rem);
+}
+.nav { display: flex; gap: 0.25rem; margin-right: auto; }
+.nav button {
+  background: none; border: 2px solid transparent; border-radius: 999px; padding: 0.35rem 0.9rem; font-weight: 700;
+  transition: background-color 150ms, color 150ms;
+}
+.nav button:hover { border-color: var(--ink); }
+.nav button[aria-current="page"] { background: var(--ink); color: var(--flour); }
+.basket-btn .count {
+  display: inline-grid; place-items: center; min-width: 1.6em; height: 1.6em; padding-inline: 0.3em;
+  background: #fff; color: var(--ink); border: 2px solid var(--ink); border-radius: 999px; font-size: 0.85em;
+}
+.basket-btn.bump .count { animation: bump 380ms var(--spring); }
+@keyframes bump { 30% { transform: scale(1.45); } }
+
+.page { max-width: 1240px; margin: 0 auto; padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2.5rem) 6rem; }
+.page-narrow { max-width: 820px; }
+
+/* ---------- top of the menu: greeting on the left, stamp card on the right */
+.welcome { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 350px); gap: 2rem; align-items: end; margin-bottom: 2rem; }
+.welcome p { margin-top: 0.6rem; max-width: 46ch; font-size: 1.1rem; }
+
+.stampcard { background: var(--flour); border: var(--line); border-radius: var(--radius); box-shadow: var(--pop); padding: 1rem 1.1rem; rotate: 1.5deg; width: 100%; max-width: 350px; }
+.stampcard h3 { font-size: 1.05rem; }
+.stampcard p { font-size: 0.92rem; }
+.stamps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.45rem; margin: 0.7rem 0 0.6rem; }
+.stamp { aspect-ratio: 1; border: 2px dashed var(--dough-deep); border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: var(--dough-deep); font-size: 0.9rem; }
+.stamp.inked { border: 0; }
+.stamp.inked svg { display: block; width: 100%; height: auto; }
+.stamp.free { border: 2px solid var(--ink); background: var(--tomato); color: #fff; font-size: 0.72rem; line-height: 1; text-align: center; }
+.stamp.inked:nth-child(odd) { rotate: -9deg; }
+.stamp.inked:nth-child(even) { rotate: 7deg; }
+
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.25rem; margin-bottom: 1.5rem; }
+.tabs { display: inline-flex; border: var(--line); border-radius: 999px; background: var(--flour); padding: 3px; }
+.tabs button { background: none; border: 0; border-radius: 999px; padding: 0.45rem 1.1rem; font-weight: 700; transition: background-color 180ms var(--ease-out), color 180ms; }
+.tabs button[aria-selected="true"] { background: var(--tomato); color: #fff; }
+.tabs .n { opacity: 0.7; font-weight: 600; margin-left: 0.25em; }
+.chip { background: none; border: 2px solid var(--ink); border-radius: 999px; padding: 0.35rem 0.9rem; font-weight: 700; transition: background-color 150ms, color 150ms; }
+.chip[aria-pressed="true"] { background: var(--cobalt); color: #fff; }
+
+/* ---------- menu cards */
+.menu { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
+.item { display: flex; flex-direction: column; overflow: hidden; }
+.menu.arriving .item { animation: arrive 420ms var(--ease-out) backwards; animation-delay: calc(var(--i) * 32ms); }
+@keyframes arrive { from { opacity: 0; filter: blur(6px); transform: translateY(8px); } }
+.art { position: relative; aspect-ratio: 4 / 3; display: grid; place-items: center; border-bottom: var(--line); background: var(--dough); overflow: hidden; }
+.art::before { content: ""; position: absolute; inset: 0; background: var(--halftone) 0 0 / 9px 9px; opacity: 0.5; mask-image: linear-gradient(200deg, #000, transparent 60%); }
+.art.t1 { background: var(--tomato-tint); }
+.art.t2 { background: var(--cobalt-tint); }
+.art svg { position: relative; width: 74%; height: auto; transition: transform 500ms var(--spring); }
+.item:hover .art svg { transform: rotate(14deg) scale(1.04); }
+.art .tags { position: absolute; left: 0.6rem; top: 0.6rem; display: flex; gap: 0.3rem; }
+.item-body { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.9rem 1rem 1rem; flex: 1; }
+.item-body .ingredients { font-size: 0.93rem; color: var(--ink-soft); }
+.item-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: auto; padding-top: 0.7rem; }
+.price { font-weight: 800; font-size: 1.25rem; letter-spacing: -0.02em; }
+
+.stepper { display: inline-flex; align-items: center; border: var(--line); border-radius: 12px; background: var(--flour); overflow: hidden; }
+.stepper button { width: 40px; height: 40px; background: none; border: 0; font-size: 1.3rem; font-weight: 700; line-height: 1; transition: background-color 120ms; }
+.stepper button:hover { background: var(--dough); }
+.stepper button:active { background: var(--dough-deep); }
+.stepper .n { min-width: 2ch; text-align: center; font-weight: 800; }
+.item-foot .stepper { animation: pop-in 260ms var(--spring); background: var(--tomato); color: #fff; }
+.item-foot .stepper button:hover { background: rgb(0 0 0 / 0.15); }
+@keyframes pop-in { from { transform: scale(0.85); opacity: 0; } }
+
+.empty { text-align: center; padding: 3rem 1rem; display: grid; gap: 0.75rem; justify-items: center; }
+
+/* ---------- basket: a till receipt that slides in from the right */
+.scrim { position: fixed; inset: 0; z-index: 30; background: rgb(0 0 0 / 0.45); opacity: 0; pointer-events: none; transition: opacity 220ms; }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 31; width: min(100vw, 440px);
+  background: var(--flour); border-left: var(--line); display: flex; flex-direction: column;
+  transform: translateX(104%); transition: transform 260ms var(--ease-in); visibility: hidden;
+}
+.basket-open .scrim { opacity: 1; pointer-events: auto; }
+.basket-open .drawer { transform: none; visibility: visible; transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1); box-shadow: -8px 0 0 rgb(0 0 0 / 0.12); }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: var(--line); }
+.drawer-body { flex: 1; overflow: auto; padding: 0.5rem 1.25rem 1rem; }
+.drawer-foot { padding: 1rem 1.25rem 1.25rem; border-top: var(--line); background: var(--dough); display: grid; gap: 0.9rem; }
+
+.line { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 0.75rem; align-items: center; padding: 0.8rem 0; border-bottom: 2px dashed var(--dough-deep); }
+.line.is-new { animation: line-in 260ms var(--ease-out); }
+@keyframes line-in { from { opacity: 0; transform: translateX(16px); } }
+.line svg { width: 52px; height: 52px; }
+.line .name { font-weight: 700; line-height: 1.2; }
+.line .each { font-size: 0.88rem; color: var(--ink-soft); }
+.line .sum { font-weight: 700; text-align: right; margin-top: 0.3rem; }
+.line .stepper button { width: 32px; height: 32px; font-size: 1.1rem; }
+.line .right { display: grid; justify-items: end; }
+
+.sums { display: grid; gap: 0.3rem; }
+.sums > div { display: flex; justify-content: space-between; gap: 1rem; }
+.sums .total { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; padding-top: 0.5rem; border-top: var(--line); margin-top: 0.3rem; }
+.sums .minus { color: var(--cobalt); font-weight: 700; }
+.code-row { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
+.code-row .input { min-height: 44px; text-transform: uppercase; }
+.code-row .input::placeholder { text-transform: none; }
+
+.placed { display: grid; gap: 1rem; padding: 1.5rem 0; animation: step-in 260ms var(--ease-out); }
+.placed .number { font-size: 2.6rem; font-weight: 800; letter-spacing: 0.04em; line-height: 1; }
+.placed .burst { width: 110px; animation: stamp 420ms var(--spring); }
+@keyframes stamp { from { transform: scale(1.8) rotate(-25deg); opacity: 0; } }
+.note { border: 2px solid var(--ink); border-radius: 12px; padding: 0.6rem 0.8rem; background: var(--cobalt-tint); font-weight: 600; }
+.note-red { background: var(--tomato-tint); }
+
+/* ---------- orders */
+.orders { display: grid; gap: 1.25rem; }
+.order { padding: 1.1rem 1.25rem 1.25rem; display: grid; gap: 0.9rem; }
+.order-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; }
+.order-items { color: var(--ink-soft); }
+.track { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.track li { font-size: 0.9rem; font-weight: 600; color: var(--ink-soft); padding-top: 0.5rem; position: relative; }
+.track li::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 8px; border: 2px solid var(--ink); border-radius: 999px; background: var(--flour); }
+.track li.done::before { background: var(--ink); }
+.track li.now { color: var(--ink); font-weight: 800; }
+.track li.now::before { background: var(--tomato); }
+.order.is-cancelled { background: var(--dough); border-style: dashed; }
+.order.is-cancelled .order-head h3 { text-decoration: line-through; }
+
+.profile-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 350px); gap: 2rem; align-items: start; }
+.profile-form { padding: 1.5rem; display: grid; gap: 1rem; }
+
+@media (max-width: 860px) {
+  .welcome, .profile-grid { grid-template-columns: 1fr; }
+  .stampcard { rotate: 0deg; }
+  .topbar { gap: 0.5rem; flex-wrap: wrap; }
+  .nav { order: 3; width: 100%; margin: 0; }
+  .topbar .wordmark { margin-right: auto; }
+  .menu { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+  .item-foot { flex-direction: column; align-items: stretch; }
+  .item-foot .stepper { justify-content: space-between; }
+  .track li { font-size: 0.78rem; }
+}

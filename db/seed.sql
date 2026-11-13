@@ -1,5 +1,6 @@
 -- Example data. Menu from the course database; all people, orders and codes are made up.
 -- Demo login for the customer app: username demo, password demo.
+-- Demo login for the staff pages of the web interface: username staff, password staff.
 USE pizza_ordering_system;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -26,6 +27,8 @@ INSERT INTO `customer` (`customer_id`,`name`,`last_name`,`username`,`password`,`
 (4,'Sara','Jansen','sara','767b181bf831a0206de45e595f88710343bfd2ded1c060bba3566bc590d5d3c8','Female','1998-07-30','0634567890','Tongerseweg 88, 6214 Maastricht',0),
 (5,'Noah','Willems','noah','767b181bf831a0206de45e595f88710343bfd2ded1c060bba3566bc590d5d3c8','Male','2000-12-09','0645678901','Meerssenerweg 17, 6215 Maastricht',0),
 (6,'Ana','Costa','ana','767b181bf831a0206de45e595f88710343bfd2ded1c060bba3566bc590d5d3c8','Other','2003-01-25','0656789012','Akerstraat 3, 6216 Maastricht',0);
+INSERT INTO `staff` (`staff_id`,`username`,`password`,`name`,`role`) VALUES
+(1,'staff','1562206543da764123c21bd524674f0a8aaf49c8a89744c97352fe677f7e4006','Robin Maas','Manager');
 INSERT INTO `deliverypersonnel` (`delivery_person_id`,`name`,`assigned_postal_code`,`availability`) VALUES
 (1,'Milan de Vries','6211',1),
 (2,'Eva Smit','6213',1),
