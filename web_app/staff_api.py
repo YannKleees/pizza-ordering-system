@@ -15,6 +15,7 @@ from fastapi import APIRouter, Cookie, HTTPException, Response
 from pydantic import BaseModel
 
 from customer_app.customer import Customer
+from web_app import geo
 from web_app.server import database, get_session, plain
 
 router = APIRouter(prefix="/api/staff")
@@ -125,9 +126,13 @@ def board(response: Response, sid: str | None = Cookie(None)):
         for order in orders:
             order["items"] = order_items(db, order["order_id"])
             order["postal_code"] = extract_postal_code(order["address"])
+            order["lat"] = order["lng"] = None
+            order["exact"] = False
+            if order["delivery_method"] == "Delivery":
+                order.update(geo.locate(order["address"], order["postal_code"]) or {})
         cursor = db.execute_query("SELECT * FROM deliverypersonnel ORDER BY name")
         couriers = cursor.fetchall()
-    return plain({"orders": orders, "couriers": couriers})
+    return plain({"orders": orders, "couriers": couriers, "shop": geo.SHOP, "geocoding": geo.ENABLED})
 
 
 @router.post("/orders/{order_id}/ready")

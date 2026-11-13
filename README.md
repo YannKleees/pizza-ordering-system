@@ -20,7 +20,7 @@ What the web interface adds on top:
 - Every pizza is drawn from its ingredient list in the database, so a new pizza gets a picture the moment staff save it
 - A basket that slides in as a receipt, a stamp card for the loyalty count, and order tracking with a five-minute cancel countdown
 - A staff board with the orders in three columns (in the kitchen, ready, out for delivery) that refreshes on its own and announces new orders
-- A delivery map for staff: the postal areas of Maastricht drawn around the Maas, with the open orders, the couriers and who is on the road (a drawing from the postal codes in the database, no map service involved)
+- A delivery map for staff: a street map (Leaflet with OpenStreetMap tiles) with a pin for every open delivery, coloured by status, and a line from the shop to orders that are on the road
 - Search on the menu by name or ingredient
 - A menu editor that shows the pizza and its calculated price while ingredients are ticked
 - An earnings page with a chart per day and a split by gender
@@ -68,6 +68,8 @@ python -m web_app                        # web: shop at http://127.0.0.1:8000, s
 python -m customer_app.main              # desktop customer app
 python -m staff_app.main                 # desktop staff app
 ```
+
+The map looks up each delivery address once at OpenStreetMap (Nominatim) and keeps the answer in `web_app/geocache.json`. Set `MAP_GEOCODING=0` to keep addresses on your machine; pins then sit in the middle of the postal area. `SHOP_LAT` and `SHOP_LNG` move the shop (default: Markt, Maastricht).
 
 Customers log in as `demo` / `demo`, staff (web only) as `staff` / `staff`. On Windows, `set DB_HOST=127.0.0.1` makes connecting faster than the default `localhost`.
 

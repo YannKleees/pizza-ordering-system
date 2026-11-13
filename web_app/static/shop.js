@@ -243,7 +243,7 @@ function renderCards() {
   const items = visibleItems();
   $(".menu").innerHTML = items.length ? items.map((item, i) => `
     <article class="card item" data-item="${item.id}" style="--i:${Math.min(i, 14)}">
-      <div class="art ${["", "t1", "t2"][item.id % 3]}">
+      <div class="art">
         ${itemArt(item)}
         <div class="tags">${item.vegan ? `<span class="tag tag-ink">Vegan</span>` : item.vegetarian ? `<span class="tag">Vegetarian</span>` : ""}</div>
       </div>

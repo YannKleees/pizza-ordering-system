@@ -2,7 +2,7 @@
    The staff pages: live orders, couriers, menu, ingredients, discount codes, history, earnings. */
 import { $, $$, api, busy, esc, money, odo, passwordField, shake, sheet, toast, when, wirePassword, wordmark } from "./ui.js";
 import { itemArt, pizzaArt } from "./pizza-art.js";
-import { areaMap, onMap } from "./area-map.js";
+import { createStreetMap, focusPin, updateStreetMap } from "./street-map.js";
 
 const app = $("#app");
 const state = { me: null, view: "board", board: null, menuTab: "Pizza", timers: [], report: {}, area: null, seen: null, signature: "" };
@@ -80,6 +80,7 @@ function stopTimers() { state.timers.forEach(clearInterval); state.timers = []; 
 function show(view) {
   if (!VIEWS.some(([id]) => id === view)) view = "board";
   stopTimers();
+  closeStreetMap();
   state.view = view;
   history.replaceState(null, "", "#" + view);
   $$(".side nav button").forEach((b) => b.toggleAttribute("aria-current", false));
@@ -154,32 +155,53 @@ function paintLanes(host) {
   });
 }
 
+function pickOrder(orderId) {
+  const card = $(`.map-list .ticket[data-order="${orderId}"]`);
+  if (!card) return;
+  card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  card.classList.remove("flash");
+  void card.offsetWidth;
+  card.classList.add("flash");
+}
+
+function closeStreetMap() {
+  if (state.street) { state.street.map.remove(); state.street = null; }
+}
+
 function paintMap(host) {
   const board = state.board;
   const deliveries = board.orders.filter((o) => o.delivery_method === "Delivery");
-  const offMap = deliveries.filter((o) => !onMap(o.postal_code));
-  const list = deliveries.filter((o) => !state.area || o.postal_code === state.area);
-  const pickups = board.orders.length - deliveries.length;
-  const crew = state.area ? board.couriers.filter((c) => c.assigned_postal_code === state.area) : [];
-  host.innerHTML = `
-    <div class="card map-card">
-      ${areaMap({ orders: board.orders, couriers: board.couriers, selected: state.area })}
-      <div class="legend">
-        <span><i style="background:#FFFEFB"></i>In the kitchen</span>
-        <span><i style="background:#DA251C"></i>Ready</span>
-        <span><i style="background:#000"></i>On its way</span>
-        <span>● courier available</span><span>○ courier out</span>
+  if (!$("#street-map", host)) {
+    closeStreetMap();
+    host.innerHTML = `
+      <div class="card map-card">
+        <div id="street-map" aria-label="Street map of the open deliveries"></div>
+        <div class="legend">
+          <span><i style="background:#fff"></i>In the kitchen</span>
+          <span><i style="background:#E11D2A;border-color:#E11D2A"></i>Ready</span>
+          <span><i style="background:#141414"></i>On its way</span>
+        </div>
+        <p class="hint" data-map-note></p>
       </div>
-      <p class="hint">A drawing of the postal areas around the Maas, not a street map. Select an area to see its orders.</p>
-      ${offMap.length ? `<p class="hint"><strong>Not on the map:</strong> ${offMap.map((o) => `no. ${o.order_id} (${esc(o.postal_code === "Unknown" ? "no postal code" : o.postal_code)})`).join(", ")}</p>` : ""}
-    </div>
-    <section class="lane map-list" aria-label="Deliveries">
-      <h2><span>${state.area ? `Deliveries to ${esc(state.area)}` : "Open deliveries"}</span><span>${list.length}</span></h2>
-      ${state.area ? `<p class="to">${crew.length ? crew.map((c) => `${esc(c.name)} is ${c.availability ? "available" : "out"}`).join(", ") + "." : "No courier covers this area."}</p>
-        <button class="btn btn-small" data-act="area-clear">Show all areas</button>` : ""}
-      ${list.map(ticket).join("") || `<p class="none">${state.area ? "No open deliveries in this area." : "No open deliveries."}</p>`}
-      ${pickups ? `<p class="to">${pickups} pickup ${pickups === 1 ? "order is" : "orders are"} on the board.</p>` : ""}
-    </section>`;
+      <section class="lane map-list" aria-label="Deliveries"></section>`;
+    state.street = createStreetMap($("#street-map"), board.shop, pickOrder);
+  }
+  updateStreetMap(state.street, deliveries);
+
+  const rough = deliveries.filter((o) => o.lat != null && !o.exact).length;
+  const missing = deliveries.filter((o) => o.lat == null);
+  $("[data-map-note]").textContent = [
+    "Select an order to find it on the map.",
+    rough ? `${rough} ${rough === 1 ? "pin has" : "pins have"} a dashed edge: placed in the middle of the postal area until the address is found.` : "",
+    missing.length ? `Not on the map: ${missing.map((o) => "no. " + o.order_id).join(", ")} (address without a known postal code).` : "",
+    board.geocoding ? "" : "Address lookup is switched off, so pins show the postal area only.",
+  ].filter(Boolean).join(" ");
+
+  const pickups = board.orders.length - deliveries.length;
+  $(".map-list").innerHTML = `
+    <h2><span>Open deliveries</span><span>${deliveries.length}</span></h2>
+    ${deliveries.map(ticket).join("") || `<p class="none">No open deliveries.</p>`}
+    ${pickups ? `<p class="to">${pickups} pickup ${pickups === 1 ? "order is" : "orders are"} on the board.</p>` : ""}`;
 }
 
 function paintBoard() {
@@ -191,19 +213,9 @@ function paintBoard() {
     || `<span class="muted">No couriers yet. Add them under Couriers.</span>`;
   const map = state.boardMode === "map";
   host.classList.toggle("is-map", map);
-  map ? paintMap(host) : paintLanes(host);
-}
-
-function selectArea(code, orderId) {
-  state.area = orderId ? code : state.area === code ? null : code;
-  paintBoard();
-  const target = orderId ? $(`.ticket[data-order="${orderId}"]`) : null;
-  if (target) {
-    target.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    target.classList.add("flash");
-  } else {
-    $(`.area[data-area="${code}"]`)?.focus({ preventScroll: true });
-  }
+  if (map) return paintMap(host);
+  closeStreetMap();
+  paintLanes(host);
 }
 
 function noticeNewOrders(board) {
@@ -489,13 +501,14 @@ function lineChart(points) {
   const x = (t) => (t1 === t0 ? (L + W - R) / 2 : L + ((t - t0) / (t1 - t0)) * (W - L - R));
   const y = (v) => T + (1 - v / max) * (H - T - B);
   const grid = [];
-  for (let v = 0; v <= max; v += step) grid.push(`<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${v ? "#E3DBCB" : "#000"}" stroke-width="${v ? 1.5 : 2.5}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">€${v}</text>`);
+  for (let v = 0; v <= max; v += step) grid.push(`<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#141414" stroke-opacity="${v ? 0.1 : 0.55}" stroke-width="${v ? 1.5 : 2}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">€${v}</text>`);
   const path = points.map((p, i) => `${i ? "L" : "M"}${x(times[i]).toFixed(1)} ${y(p.earnings).toFixed(1)}`).join("");
   const label = (t) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Earnings per day from ${label(t0)} to ${label(t1)}, highest ${money(top)}">
     ${grid.join("")}
-    <path d="${path}" fill="none" stroke="#DA251C" stroke-width="3" stroke-linejoin="round"/>
-    ${points.map((p, i) => `<circle cx="${x(times[i]).toFixed(1)}" cy="${y(p.earnings).toFixed(1)}" r="5" fill="#FFFEFB" stroke="#000" stroke-width="2.5"><title>${label(times[i])}: ${money(p.earnings)}</title></circle>`).join("")}
+    <path d="${path}L${x(times[times.length - 1]).toFixed(1)} ${y(0)}L${x(times[0]).toFixed(1)} ${y(0)}Z" fill="#E11D2A" opacity=".07"/>
+    <path d="${path}" fill="none" stroke="#E11D2A" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${points.map((p, i) => `<circle cx="${x(times[i]).toFixed(1)}" cy="${y(p.earnings).toFixed(1)}" r="4.5" fill="#fff" stroke="#E11D2A" stroke-width="2"><title>${label(times[i])}: ${money(p.earnings)}</title></circle>`).join("")}
     <text x="${L}" y="${H - 8}">${label(t0)}</text>${t1 !== t0 ? `<text x="${W - R}" y="${H - 8}" text-anchor="end">${label(t1)}</text>` : ""}
   </svg>`;
 }
@@ -549,8 +562,8 @@ function renderEarnings() {
 app.addEventListener("click", async (event) => {
   const nav = event.target.closest(".side [data-view]");
   if (nav) return show(nav.dataset.view);
-  const spot = event.target.closest(".area-map [data-area]");
-  if (spot) return selectArea(spot.dataset.area, spot.dataset.pin);
+  const card = event.target.closest(".map-list .ticket");
+  if (card && !event.target.closest("button")) return focusPin(state.street, card.dataset.order);
   const el = event.target.closest("[data-act]");
   if (!el) return;
   const id = el.dataset.id;
@@ -561,7 +574,6 @@ app.addEventListener("click", async (event) => {
       await busy(el, () => guard(async () => { await api(`/api/staff/orders/${id}/${el.dataset.act}`, { method: "POST" }); state.signature = ""; await loadBoard(); }));
       break;
     case "assign": assign(el); break;
-    case "area-clear": state.area = null; paintBoard(); break;
     case "board-mode":
       state.boardMode = el.dataset.mode;
       try { localStorage.setItem("boardMode", state.boardMode); } catch { /* private window */ }
@@ -585,10 +597,6 @@ app.addEventListener("click", async (event) => {
   }
 });
 
-app.addEventListener("keydown", (event) => {
-  const spot = event.target.closest?.(".area-map [data-area]");
-  if (spot && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); selectArea(spot.dataset.area, spot.dataset.pin); }
-});
 const linkPin = (event, on) => {
   const card = event.target.closest?.(".map-list .ticket");
   if (card) $(`[data-pin="${card.dataset.order}"]`)?.classList.toggle("hot", on);

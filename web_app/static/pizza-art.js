@@ -1,10 +1,9 @@
 /* Vibe coded: this web interface was written with an AI assistant in 2026.
    Draws every menu item from its data. A pizza is built from the ingredient list stored in the
-   database, in a flat print style: tomato red, a quiet leaf green for vegetables and black line,
-   on dough colours. The same pizza always looks the same. */
+   database, in a flat sticker style with a soft dark-brown line. The same pizza always looks the same. */
 
-const INK = "#000";
-const TOMATO = "#DA251C";
+const INK = "#3B1A12";
+const TOMATO = "#E11D2A";
 const TOMATO_DEEP = "#8E1A12";
 const TOMATO_TINT = "#F29C8E";
 const LEAF = "#3F6B3A"; // the one colour outside the palette, used only inside the drawings
@@ -126,17 +125,16 @@ export function pizzaArt(ingredients, seed = 1) {
     <pattern id="${id}d" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><circle cx="3.5" cy="3.5" r="1.25" fill="${INK}"/></pattern>
     <clipPath id="${id}c"><circle cx="100" cy="100" r="77"/></clipPath>
   </defs>
-  <circle cx="106" cy="107" r="90" fill="${INK}"/>
   <circle cx="100" cy="100" r="90" fill="${GOLD}" stroke="${INK}" stroke-width="3"/>
   <circle cx="100" cy="100" r="77" fill="${sauce}" stroke="${INK}" stroke-width="2"/>
   ${hasCheese ? `<path d="${cheeseBlob(random)}" fill="${cheeseFill}" stroke="${INK}" stroke-width="1.8"/>` : ""}
-  <path d="M100 100 L200 60 L200 200 L60 200 Z" fill="url(#${id}d)" opacity=".13" clip-path="url(#${id}c)"/>
+  <ellipse cx="74" cy="66" rx="34" ry="20" fill="#fff" opacity=".22" transform="rotate(-28 74 66)" clip-path="url(#${id}c)"/>
   ${pieces}
 </svg>`;
 }
 
 const CAN = (body, band) => `<svg viewBox="0 0 200 200" role="img" aria-label="Drawing of a drink can">
-  <rect x="72" y="42" width="68" height="128" rx="12" fill="${INK}"/>
+  <rect x="72" y="42" width="68" height="128" rx="12" fill="${INK}" opacity=".16"/>
   <rect x="66" y="36" width="68" height="128" rx="12" fill="${body}" stroke="${INK}" stroke-width="3"/>
   <rect x="66" y="78" width="68" height="40" fill="${band}" stroke="${INK}" stroke-width="3"/>
   <path d="M78 36h44M78 164h44" stroke="${INK}" stroke-width="3"/>
@@ -144,14 +142,14 @@ const CAN = (body, band) => `<svg viewBox="0 0 200 200" role="img" aria-label="D
 </svg>`;
 
 const BOTTLE = (body) => `<svg viewBox="0 0 200 200" role="img" aria-label="Drawing of a bottle">
-  <path d="M92 26h28v24c0 10 14 16 14 34v80a10 10 0 0 1-10 10H88a10 10 0 0 1-10-10V84c0-18 14-24 14-34Z" fill="${INK}" transform="translate(6 6)"/>
+  <path d="M92 26h28v24c0 10 14 16 14 34v80a10 10 0 0 1-10 10H88a10 10 0 0 1-10-10V84c0-18 14-24 14-34Z" fill="${INK}" opacity=".16" transform="translate(6 6)"/>
   <path d="M86 20h28v24c0 10 14 16 14 34v80a10 10 0 0 1-10 10H82a10 10 0 0 1-10-10V78c0-18 14-24 14-34Z" fill="${body}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
   <rect x="84" y="14" width="32" height="12" rx="3" fill="${TOMATO}" stroke="${INK}" stroke-width="3"/>
   <rect x="72" y="96" width="56" height="34" fill="${FLOUR}" stroke="${INK}" stroke-width="3"/>
 </svg>`;
 
 const SLICE = (sponge, cream, top) => `<svg viewBox="0 0 200 200" role="img" aria-label="Drawing of a slice of cake">
-  <path d="M36 150 164 150 164 84 36 112Z" fill="${INK}" transform="translate(7 7)"/>
+  <path d="M36 150 164 150 164 84 36 112Z" fill="${INK}" opacity=".16" transform="translate(7 7)"/>
   <path d="M36 150 164 150 164 84 36 112Z" fill="${sponge}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
   <path d="M36 126 164 112" stroke="${cream}" stroke-width="9"/>
   <path d="M36 112 164 84 164 96 36 122Z" fill="${top}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
@@ -159,7 +157,7 @@ const SLICE = (sponge, cream, top) => `<svg viewBox="0 0 200 200" role="img" ari
 </svg>`;
 
 const CONE = (one, two) => `<svg viewBox="0 0 200 200" role="img" aria-label="Drawing of an ice cream cone">
-  <path d="M74 104h64l-32 78Z" fill="${INK}"/>
+  <path d="M74 104h64l-32 78Z" fill="${INK}" opacity=".16"/>
   <path d="M68 98h64l-32 78Z" fill="${GOLD}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
   <path d="M78 122l44-24M88 146l34-34M76 100l28 28" stroke="${INK}" stroke-width="1.6" opacity=".5"/>
   <circle cx="84" cy="76" r="26" fill="${one}" stroke="${INK}" stroke-width="3"/>

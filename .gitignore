@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 .env
 *.log
+web_app/geocache.json
