@@ -148,20 +148,93 @@ def mark_ready(order_id: int, response: Response, sid: str | None = Cookie(None)
     return {"ok": True}
 
 
-@router.post("/orders/{order_id}/delivered")
-def mark_delivered(order_id: int, response: Response, sid: str | None = Cookie(None)):
+@router.post("/orders/{order_id}/dispatch")
+def dispatch(order_id: int, response: Response, sid: str | None = Cookie(None)):
+    """
+    Send one ready delivery order out. The courier of its postal area takes it, together with up
+    to two more ready orders for the same area that were placed within three minutes of it
+    (the grouping rule of the desktop app).
+    """
     require_staff(sid, response)
     with database() as db:
-        cursor = db.execute_query("SELECT status FROM customerorder WHERE order_id = %s", (order_id,))
+        cursor = db.execute_query(
+            """
+            SELECT co.order_id, co.order_date, co.status, co.delivery_method, c.address,
+                   (SELECT COUNT(*) FROM deliveryassignment da WHERE da.order_id = co.order_id) AS assigned
+            FROM customerorder co
+            JOIN customer c ON co.customer_id = c.customer_id
+            WHERE co.order_id = %s
+            """, (order_id,))
         order = cursor.fetchone()
-        if not order or order["status"] not in ("Ready for Delivery", "Out for Delivery"):
-            raise HTTPException(409, "Only an order that is ready or on its way can be marked delivered.")
+        if not order or order["status"] != "Ready for Delivery" or order["delivery_method"] != "Delivery" or order["assigned"]:
+            raise HTTPException(409, "Only a ready delivery order can be sent out.")
+        postal_code = extract_postal_code(order["address"])
+        if postal_code == "Unknown":
+            raise HTTPException(409, "This address has no four-digit postal code, so no courier can be matched to it.")
+        cursor = db.execute_query(
+            "SELECT delivery_person_id, name FROM deliverypersonnel WHERE assigned_postal_code = %s AND availability = 1",
+            (postal_code,))
+        courier = cursor.fetchone()
+        if not courier:
+            raise HTTPException(409, f"No courier for {postal_code} is available right now. Wait for one to come back, or add one under Couriers.")
+        cursor = db.execute_query(
+            """
+            SELECT co.order_id, co.order_date, c.address
+            FROM customerorder co
+            JOIN customer c ON co.customer_id = c.customer_id
+            LEFT JOIN deliveryassignment da ON co.order_id = da.order_id
+            WHERE co.status = 'Ready for Delivery' AND da.order_id IS NULL
+              AND co.delivery_method = 'Delivery' AND co.order_id <> %s
+            ORDER BY co.order_date ASC
+            """, (order_id,))
+        batch = [order]
+        for other in cursor.fetchall():
+            near = abs(other["order_date"] - order["order_date"]) <= datetime.timedelta(minutes=3)
+            if len(batch) < 3 and near and extract_postal_code(other["address"]) == postal_code:
+                batch.append(other)
+        try:
+            for item in batch:
+                db.execute_query(
+                    "INSERT INTO deliveryassignment (order_id, delivery_person_id, assigned_at) VALUES (%s, %s, %s)",
+                    (item["order_id"], courier["delivery_person_id"], datetime.datetime.now()))
+                db.execute_query("UPDATE customerorder SET status = 'Out for Delivery' WHERE order_id = %s", (item["order_id"],))
+            db.execute_query("UPDATE deliverypersonnel SET availability = 0 WHERE delivery_person_id = %s",
+                             (courier["delivery_person_id"],))
+            db.connection.commit()
+        except Exception:
+            db.connection.rollback()
+            raise HTTPException(500, "Sending the order out failed.")
+    return {"courier": courier["name"], "postal_code": postal_code, "orders": [item["order_id"] for item in batch]}
+
+
+@router.post("/orders/{order_id}/delivered")
+def mark_delivered(order_id: int, response: Response, sid: str | None = Cookie(None)):
+    """The last step: a delivery that is on the road has arrived, or a ready pickup order was handed over."""
+    require_staff(sid, response)
+    with database() as db:
+        cursor = db.execute_query("SELECT status, delivery_method FROM customerorder WHERE order_id = %s", (order_id,))
+        order = cursor.fetchone()
+        if not order:
+            raise HTTPException(404, "Order not found.")
+        if order["delivery_method"] == "Pickup" and order["status"] != "Ready for Delivery":
+            raise HTTPException(409, "A pickup order can be handed over once it is ready.")
+        if order["delivery_method"] == "Delivery" and order["status"] != "Out for Delivery":
+            raise HTTPException(409, "A delivery has to be sent out before it can be delivered.")
         db.execute_query("UPDATE customerorder SET status = 'Delivered' WHERE order_id = %s", (order_id,))
         cursor = db.execute_query("SELECT delivery_person_id FROM deliveryassignment WHERE order_id = %s", (order_id,))
         assignment = cursor.fetchone()
         if assignment:
-            db.execute_query("UPDATE deliverypersonnel SET availability = 1 WHERE delivery_person_id = %s",
-                             (assignment["delivery_person_id"],))
+            # the courier is free again once none of their orders is still on the road
+            cursor = db.execute_query(
+                """
+                SELECT COUNT(*) AS still_out
+                FROM deliveryassignment da
+                JOIN customerorder co ON co.order_id = da.order_id
+                WHERE da.delivery_person_id = %s AND co.status = 'Out for Delivery'
+                """, (assignment["delivery_person_id"],))
+            if not cursor.fetchone()["still_out"]:
+                db.execute_query("UPDATE deliverypersonnel SET availability = 1 WHERE delivery_person_id = %s",
+                                 (assignment["delivery_person_id"],))
         db.connection.commit()
     return {"ok": True}
 

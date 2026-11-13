@@ -18,38 +18,38 @@
 .head h1 { font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.2rem); }
 .head p { margin-top: 0.25rem; }
 
-/* ---------- order board */
+/* ---------- orders: the queue on the left, the street map on the right */
 .couriers { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
 .courier { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; border: 1px solid var(--line); border-radius: 999px; background: var(--white); font-weight: 500; font-size: 0.92rem; }
 .courier i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--line-strong); }
 .courier.free i { background: var(--ink); border-color: var(--ink); }
 .courier.out { background: var(--soft); color: var(--ink-soft); }
 
-.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: start; }
-.lane { display: grid; gap: 0.7rem; align-content: start; min-height: 220px; padding: 0.7rem; border-radius: var(--radius); background: var(--soft); border: 1px solid var(--line); }
-.lane > h2 { display: flex; justify-content: space-between; padding: 0.25rem 0.35rem; font-size: 0.98rem; }
-.lane > h2 span:last-child { color: var(--ink-soft); font-weight: 600; }
-.lane .none { color: var(--ink-soft); padding: 1.5rem 0.5rem; text-align: center; font-size: 0.92rem; }
-.ticket { padding: 0.85rem 0.95rem; display: grid; gap: 0.5rem; transition: box-shadow 200ms, border-color 200ms, transform 200ms var(--ease-out); }
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 1.25rem; align-items: start; }
+.queue { display: grid; gap: 1.5rem; }
+.lane { display: grid; gap: 0.5rem; align-content: start; }
+.lane > h2 { display: flex; align-items: baseline; gap: 0.5rem; padding-bottom: 0.45rem; border-bottom: 1px solid var(--line); font-size: 1rem; }
+.lane > h2 span:last-child { color: var(--ink-soft); font-weight: 600; font-size: 0.9rem; }
+.lane .none { color: var(--ink-soft); padding: 0.5rem 0; font-size: 0.92rem; }
+.ticket { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.75rem; align-items: center; padding: 0.75rem 0.9rem; cursor: pointer; transition: box-shadow 200ms, border-color 200ms; }
 .ticket:hover { box-shadow: var(--shadow); border-color: var(--line-strong); }
 .ticket.is-late { box-shadow: inset 3px 0 0 var(--red), var(--shadow-small); }
-.ticket-top { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
-.ticket-top strong { font-size: 1.05rem; font-weight: 700; }
-.ticket ul { list-style: none; margin: 0; padding: 0.45rem 0; border-block: 1px solid var(--line); font-weight: 500; }
-.ticket .to { font-size: 0.9rem; color: var(--ink-soft); }
-.ticket .btn { width: 100%; }
+.ticket-main { display: grid; gap: 0.15rem; min-width: 0; }
+.ticket-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.6rem; }
+.ticket-top strong { font-weight: 700; }
+.ticket-top .tag { margin-left: auto; }
+.ticket-items { font-weight: 500; }
+.ticket .to { font-size: 0.88rem; color: var(--ink-soft); overflow-wrap: anywhere; }
+.ticket .late { color: var(--red-dark); font-weight: 600; }
+.ticket .btn { min-width: 6.5rem; }
 .ticket.flash { animation: flash 1100ms var(--ease-out); }
 @keyframes flash { 0%, 40% { background: var(--red-soft); border-color: var(--red); } }
 
-/* ---------- delivery map */
-.board.is-map { grid-template-columns: minmax(0, 1.6fr) minmax(290px, 1fr); }
 .map-card { position: sticky; top: 1rem; padding: 0.5rem; display: grid; gap: 0.6rem; }
-#street-map { height: min(64vh, 620px); min-height: 380px; border-radius: 10px; z-index: 0; font-family: var(--font); background: var(--soft); }
+#street-map { height: min(66vh, 640px); min-height: 380px; border-radius: 10px; z-index: 0; font-family: var(--font); background: var(--soft); }
 .legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; padding-inline: 0.4rem; font-size: 0.86rem; font-weight: 500; color: var(--ink-soft); }
 .legend i { display: inline-block; width: 11px; height: 11px; margin-right: 0.35rem; border-radius: 50%; border: 1.5px solid var(--ink); vertical-align: -1px; }
 .map-card .hint { padding: 0 0.4rem 0.3rem; }
-.map-list .to { padding-inline: 0.3rem; font-size: 0.9rem; color: var(--ink-soft); }
-.map-list .ticket { cursor: pointer; }
 
 .map-pin { background: none; border: 0; }
 .map-pin span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50% 50% 50% 4px; rotate: -45deg; border: 2px solid #fff; box-shadow: 0 4px 10px -2px rgb(0 0 0 / 0.45); transition: scale 200ms var(--spring); }
@@ -125,7 +125,7 @@ td .sub { font-size: 0.88rem; color: var(--ink-soft); }
   .side nav button { white-space: nowrap; gap: 0.4rem; }
   .side nav button[aria-current="page"]::before { display: none; }
   .side .who { margin: 0 0 0 auto; grid-auto-flow: column; align-items: center; white-space: nowrap; }
-  .board, .board.is-map, .charts { grid-template-columns: 1fr; }
+  .board, .charts { grid-template-columns: 1fr; }
   .map-card { position: static; }
   .builder { grid-template-columns: 1fr; }
   .builder .preview { position: static; max-width: 170px; margin: 0 auto; }

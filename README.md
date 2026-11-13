@@ -9,9 +9,9 @@ It has two interfaces on the same database and the same ordering logic: the orig
 | 2024, desktop (Tkinter) | 2026, web |
 | --- | --- |
 | ![Old customer app](docs/screenshots/old-customer.png) | ![New customer shop](docs/screenshots/new-customer.png) |
-| ![Old staff app](docs/screenshots/old-staff.png) | ![New staff order board](docs/screenshots/new-staff.png) |
+| ![Old staff app](docs/screenshots/old-staff.png) | ![New staff orders screen with map](docs/screenshots/new-staff.png) |
 
-More of the web interface: [login](docs/screenshots/new-login.png), [basket](docs/screenshots/new-basket.png), [order tracking](docs/screenshots/new-orders.png), [delivery map](docs/screenshots/new-map.png), [menu editor](docs/screenshots/new-menu-editor.png), [earnings](docs/screenshots/new-earnings.png), [phone](docs/screenshots/new-mobile.png).
+More of the web interface: [login](docs/screenshots/new-login.png), [basket](docs/screenshots/new-basket.png), [order tracking](docs/screenshots/new-orders.png), [menu editor](docs/screenshots/new-menu-editor.png), [earnings](docs/screenshots/new-earnings.png), [phone](docs/screenshots/new-mobile.png).
 
 The web interface (`web_app/`) is vibe coded: I directed the design and an AI assistant wrote the code. It does not replace the course work. Logging in, the menu, the basket, prices, discount codes, the loyalty count and placing or cancelling an order all run through my original classes in `customer_app/`. The staff pages repeat the SQL and the rules of `staff_app/`, because that code lives inside the Tkinter screens and cannot be imported.
 
@@ -19,8 +19,8 @@ What the web interface adds on top:
 
 - Every pizza is drawn from its ingredient list in the database, so a new pizza gets a picture the moment staff save it
 - A basket that slides in as a receipt, a stamp card for the loyalty count, and order tracking with a five-minute cancel countdown
-- A staff board with the orders in three columns (in the kitchen, ready, out for delivery) that refreshes on its own and announces new orders
-- A delivery map for staff: a street map (Leaflet with OpenStreetMap tiles) with a pin for every open delivery, coloured by status, and a line from the shop to orders that are on the road
+- A staff orders screen with the queue next to a street map. Every order has one button that forwards it to its next step: ready, sent out with the courier of its postal area (or handed over for pickup), delivered. New orders are announced and the list refreshes on its own
+- The street map (Leaflet with OpenStreetMap tiles) has a pin for every open delivery, coloured by step, and a line from the shop to orders that are on the road
 - Search on the menu by name or ingredient
 - A menu editor that shows the pizza and its calculated price while ingredients are ticked
 - An earnings page with a chart per day and a split by gender

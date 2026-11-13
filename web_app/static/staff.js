@@ -6,7 +6,6 @@ import { createStreetMap, focusPin, updateStreetMap } from "./street-map.js";
 
 const app = $("#app");
 const state = { me: null, view: "board", board: null, menuTab: "Pizza", timers: [], report: {}, area: null, seen: null, signature: "" };
-try { state.boardMode = localStorage.getItem("boardMode") === "map" ? "map" : "lanes"; } catch { state.boardMode = "lanes"; }
 
 const VIEWS = [["board", "Orders"], ["couriers", "Couriers"], ["menu", "Menu"], ["ingredients", "Ingredients"],
   ["codes", "Discount codes"], ["history", "History"], ["earnings", "Earnings"]];
@@ -106,7 +105,13 @@ const table = (headers, rows, empty) => rows.length
 
 /* ================================================================ live orders */
 
-const LANES = [["Pending", "In the kitchen"], ["Ready for Delivery", "Ready"], ["Out for Delivery", "Out for delivery"]];
+/* One screen: the queue on the left, the street map on the right. An order moves through three
+   steps and each step has exactly one button, the one that forwards it to the next step. */
+const STEPS = [
+  ["Pending", "In the kitchen", "Nothing is being made right now."],
+  ["Ready for Delivery", "Ready", "Nothing is waiting to leave."],
+  ["Out for Delivery", "On the road", "No courier is out."],
+];
 
 function minutesAgo(iso) {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
@@ -116,47 +121,39 @@ function minutesAgo(iso) {
   return when(iso);
 }
 
+function nextStep(order) {
+  const id = order.order_id;
+  const pickup = order.delivery_method === "Pickup";
+  if (order.status === "Pending") return `<button class="btn btn-lead btn-small" data-act="ready" data-id="${id}">Ready</button>`;
+  if (order.status === "Ready for Delivery") {
+    return pickup
+      ? `<button class="btn btn-lead btn-small" data-act="delivered" data-id="${id}">Handed over</button>`
+      : `<button class="btn btn-lead btn-small" data-act="dispatch" data-id="${id}">Send out</button>`;
+  }
+  return `<button class="btn btn-lead btn-small" data-act="delivered" data-id="${id}">Delivered</button>`;
+}
+
 function ticket(order) {
   const pickup = order.delivery_method === "Pickup";
   const late = (Date.now() - new Date(order.order_date)) / 60000 > 30;
-  let action = "";
-  if (order.status === "Pending") action = `<button class="btn btn-lead btn-small" data-act="ready" data-id="${order.order_id}">Mark ready</button>`;
-  else if (pickup) action = `<button class="btn btn-lead btn-small" data-act="delivered" data-id="${order.order_id}">Mark picked up</button>`;
-  else if (order.status === "Ready for Delivery") action = `<p class="to">Waiting for a courier for ${esc(order.postal_code)}.</p><button class="btn btn-small" data-act="delivered" data-id="${order.order_id}">Mark delivered</button>`;
-  else action = `<p class="to">With ${esc(order.delivery_person_name || "a courier")}.</p><button class="btn btn-lead btn-small" data-act="delivered" data-id="${order.order_id}">Mark delivered</button>`;
+  const where = pickup ? "Collects at the counter"
+    : order.status === "Out for Delivery" ? `${esc(order.address)}, with ${esc(order.delivery_person_name || "a courier")}`
+    : esc(order.address);
   return `
     <article class="card ticket ${late ? "is-late" : ""}" data-order="${order.order_id}">
-      <div class="ticket-top"><strong>No. ${order.order_id}</strong><span class="tag ${pickup ? "tag-ink" : ""}">${pickup ? "Pickup" : "Delivery"}</span></div>
-      <div><strong>${esc(order.customer_name)} ${esc(order.last_name || "")}</strong>
-        <div class="to">${pickup ? "Collects at the counter" : esc(order.address)}</div>
-        <div class="to">${minutesAgo(order.order_date)}${late ? ", over 30 minutes" : ""}</div></div>
-      <ul>${order.items.map((i) => `<li>${i.quantity} × ${esc(i.name)}</li>`).join("")}</ul>
-      <div class="row spread"><span>${money(order.total_price)}</span></div>
-      ${action}
+      <div class="ticket-main">
+        <div class="ticket-top"><strong>No. ${order.order_id}</strong><span>${esc(order.customer_name)} ${esc(order.last_name || "")}</span>
+          <span class="tag ${pickup ? "tag-ink" : ""}">${pickup ? "Pickup" : "Delivery"}</span></div>
+        <div class="ticket-items">${order.items.map((i) => `${i.quantity} × ${esc(i.name)}`).join(", ")}</div>
+        <div class="to">${where}</div>
+        <div class="to">${minutesAgo(order.order_date)}${late ? `, <span class="late">over 30 minutes</span>` : ""}, ${money(order.total_price)}</div>
+      </div>
+      ${nextStep(order)}
     </article>`;
 }
 
-function paintLanes(host) {
-  const board = state.board;
-  // FLIP: remember where each ticket is, repaint, then let it travel from the old place
-  const before = new Map($$(".ticket", host).map((el) => [el.dataset.order, el.getBoundingClientRect()]));
-  host.innerHTML = LANES.map(([status, label]) => {
-    const orders = board.orders.filter((o) => o.status === status);
-    return `<section class="lane" aria-label="${label}"><h2><span>${label}</span><span>${orders.length}</span></h2>
-      ${orders.map(ticket).join("") || `<p class="none">Nothing here.</p>`}</section>`;
-  }).join("");
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  $$(".ticket", host).forEach((el) => {
-    const old = before.get(el.dataset.order);
-    const now = el.getBoundingClientRect();
-    if (!old) return before.size && el.animate([{ opacity: 0, transform: "scale(0.92)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: "cubic-bezier(0.23,1,0.32,1)" });
-    const dx = old.left - now.left, dy = old.top - now.top;
-    if (dx || dy) el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 360, easing: "cubic-bezier(0.23,1,0.32,1)" });
-  });
-}
-
 function pickOrder(orderId) {
-  const card = $(`.map-list .ticket[data-order="${orderId}"]`);
+  const card = $(`.queue .ticket[data-order="${orderId}"]`);
   if (!card) return;
   card.scrollIntoView({ block: "nearest", behavior: "smooth" });
   card.classList.remove("flash");
@@ -168,26 +165,50 @@ function closeStreetMap() {
   if (state.street) { state.street.map.remove(); state.street = null; }
 }
 
-function paintMap(host) {
+function paintBoard() {
   const board = state.board;
-  const deliveries = board.orders.filter((o) => o.delivery_method === "Delivery");
+  const host = $(".board");
+  if (!host || !board) return;
+  $(".couriers").innerHTML = board.couriers.map((c) =>
+    `<span class="courier ${c.availability ? "free" : "out"}"><i></i>${esc(c.name)} <span class="muted">${esc(c.assigned_postal_code)}</span>${c.availability ? "" : " on the road"}</span>`).join("")
+    || `<span class="muted">No couriers yet. Add them under Couriers.</span>`;
+
   if (!$("#street-map", host)) {
     closeStreetMap();
     host.innerHTML = `
+      <div class="queue"></div>
       <div class="card map-card">
         <div id="street-map" aria-label="Street map of the open deliveries"></div>
         <div class="legend">
           <span><i style="background:#fff"></i>In the kitchen</span>
           <span><i style="background:#E11D2A;border-color:#E11D2A"></i>Ready</span>
-          <span><i style="background:#141414"></i>On its way</span>
+          <span><i style="background:#141414"></i>On the road</span>
         </div>
         <p class="hint" data-map-note></p>
-      </div>
-      <section class="lane map-list" aria-label="Deliveries"></section>`;
+      </div>`;
     state.street = createStreetMap($("#street-map"), board.shop, pickOrder);
   }
-  updateStreetMap(state.street, deliveries);
 
+  // FLIP: remember where each order is, repaint, then let it travel to its new step
+  const queue = $(".queue", host);
+  const before = new Map($$(".ticket", queue).map((el) => [el.dataset.order, el.getBoundingClientRect()]));
+  queue.innerHTML = STEPS.map(([status, label, none]) => {
+    const orders = board.orders.filter((o) => o.status === status);
+    return `<section class="lane" aria-label="${label}"><h2><span>${label}</span><span>${orders.length}</span></h2>
+      ${orders.map(ticket).join("") || `<p class="none">${none}</p>`}</section>`;
+  }).join("");
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    $$(".ticket", queue).forEach((el) => {
+      const old = before.get(el.dataset.order);
+      const now = el.getBoundingClientRect();
+      if (!old) return before.size && el.animate([{ opacity: 0, transform: "translateY(-6px)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: "cubic-bezier(0.23,1,0.32,1)" });
+      const dy = old.top - now.top;
+      if (dy) el.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 380, easing: "cubic-bezier(0.23,1,0.32,1)" });
+    });
+  }
+
+  const deliveries = board.orders.filter((o) => o.delivery_method === "Delivery");
+  updateStreetMap(state.street, deliveries);
   const rough = deliveries.filter((o) => o.lat != null && !o.exact).length;
   const missing = deliveries.filter((o) => o.lat == null);
   $("[data-map-note]").textContent = [
@@ -196,26 +217,6 @@ function paintMap(host) {
     missing.length ? `Not on the map: ${missing.map((o) => "no. " + o.order_id).join(", ")} (address without a known postal code).` : "",
     board.geocoding ? "" : "Address lookup is switched off, so pins show the postal area only.",
   ].filter(Boolean).join(" ");
-
-  const pickups = board.orders.length - deliveries.length;
-  $(".map-list").innerHTML = `
-    <h2><span>Open deliveries</span><span>${deliveries.length}</span></h2>
-    ${deliveries.map(ticket).join("") || `<p class="none">No open deliveries.</p>`}
-    ${pickups ? `<p class="to">${pickups} pickup ${pickups === 1 ? "order is" : "orders are"} on the board.</p>` : ""}`;
-}
-
-function paintBoard() {
-  const board = state.board;
-  const host = $(".board");
-  if (!host || !board) return;
-  $(".couriers").innerHTML = board.couriers.map((c) =>
-    `<span class="courier ${c.availability ? "free" : "out"}"><i></i>${esc(c.name)} <span class="muted">${esc(c.assigned_postal_code)}</span>${c.availability ? "" : " out"}</span>`).join("")
-    || `<span class="muted">No couriers yet. Add them under Couriers.</span>`;
-  const map = state.boardMode === "map";
-  host.classList.toggle("is-map", map);
-  if (map) return paintMap(host);
-  closeStreetMap();
-  paintLanes(host);
 }
 
 function noticeNewOrders(board) {
@@ -246,10 +247,8 @@ async function loadBoard() {
 }
 
 function renderBoard() {
-  $("#view").innerHTML = head("Orders", "Refreshes every 8 seconds.",
-    `<div class="tabs" role="tablist" aria-label="View">${[["lanes", "Board"], ["map", "Map"]].map(([mode, label]) =>
-      `<button role="tab" data-act="board-mode" data-mode="${mode}" aria-selected="${state.boardMode === mode}">${label}</button>`).join("")}</div>
-     <button class="btn btn-lead" data-act="assign">Send couriers out</button>`) +
+  $("#view").innerHTML = head("Orders", "Each order has one button: it moves the order to its next step. The list refreshes every 8 seconds.",
+    `<button class="btn" data-act="assign">Send out everything that is ready</button>`) +
     `<div class="couriers" aria-label="Couriers"></div><div class="board"></div>`;
   state.signature = "";
   loadBoard();
@@ -259,7 +258,8 @@ function renderBoard() {
 async function assign(button) {
   await busy(button, () => guard(async () => {
     const result = await api("/api/staff/deliveries/assign", { method: "POST" });
-    if (!result.ready) toast("No delivery orders are ready to go.");
+    if (!result.ready) toast("No delivery order is ready to leave yet. Mark it ready first.");
+    state.signature = "";
     result.assigned.forEach((a) => toast(`${a.courier} takes ${a.orders.length === 1 ? "order" : "orders"} ${a.orders.join(", ")} to ${a.postal_code}.`));
     result.waiting.forEach((message) => toast(message + ".", { error: true }));
     await loadBoard();
@@ -562,7 +562,7 @@ function renderEarnings() {
 app.addEventListener("click", async (event) => {
   const nav = event.target.closest(".side [data-view]");
   if (nav) return show(nav.dataset.view);
-  const card = event.target.closest(".map-list .ticket");
+  const card = event.target.closest(".queue .ticket");
   if (card && !event.target.closest("button")) return focusPin(state.street, card.dataset.order);
   const el = event.target.closest("[data-act]");
   if (!el) return;
@@ -574,11 +574,13 @@ app.addEventListener("click", async (event) => {
       await busy(el, () => guard(async () => { await api(`/api/staff/orders/${id}/${el.dataset.act}`, { method: "POST" }); state.signature = ""; await loadBoard(); }));
       break;
     case "assign": assign(el); break;
-    case "board-mode":
-      state.boardMode = el.dataset.mode;
-      try { localStorage.setItem("boardMode", state.boardMode); } catch { /* private window */ }
-      $$("[data-act=board-mode]").forEach((b) => b.setAttribute("aria-selected", b === el));
-      paintBoard();
+    case "dispatch":
+      await busy(el, () => guard(async () => {
+        const sent = await api(`/api/staff/orders/${id}/dispatch`, { method: "POST" });
+        toast(`${sent.courier} takes ${sent.orders.length === 1 ? "order" : "orders"} ${sent.orders.join(", ")}.`);
+        state.signature = "";
+        await loadBoard();
+      }));
       break;
     case "courier-add": courierSheet(); break;
     case "courier-edit": courierSheet(find(state.couriers, "delivery_person_id")); break;
@@ -598,7 +600,7 @@ app.addEventListener("click", async (event) => {
 });
 
 const linkPin = (event, on) => {
-  const card = event.target.closest?.(".map-list .ticket");
+  const card = event.target.closest?.(".queue .ticket");
   if (card) $(`[data-pin="${card.dataset.order}"]`)?.classList.toggle("hot", on);
 };
 app.addEventListener("mouseover", (event) => linkPin(event, true));
